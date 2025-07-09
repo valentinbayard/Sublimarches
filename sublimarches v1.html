@@ -504,7 +504,7 @@
             renderPieces();
         }
 
-        // Algorithme d'optimisation (version simplifiée)
+        // Algorithme d'optimisation complet
         function optimizeCutting() {
             const sawThickness = parseInt(document.getElementById('sawThickness').value) || 10;
             const validPieces = pieces.filter(p => p.width && p.height);
@@ -518,7 +518,7 @@
             btn.disabled = true;
             btn.innerHTML = '<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>Calcul en cours...';
 
-            // Simulation d'un calcul (algorithme simplifié)
+            // Calcul réel avec l'algorithme complet
             setTimeout(() => {
                 const solution = calculateOptimalCutting(validPieces, sawThickness);
                 displayResults(solution);
@@ -530,57 +530,87 @@
         }
 
         function calculateOptimalCutting(validPieces, sawThickness) {
-            // Algorithme simplifié - dans la vraie version, utiliser l'algorithme complet
             const solution = [];
-            const remainingPieces = [...validPieces];
-            const plankUsage = {};
+            let remainingPieces = validPieces.map((piece, index) => ({
+                ...piece,
+                instanceId: `piece-${piece.id}`,
+                name: `${index + 1}`,
+                originalIndex: index
+            }));
             
+            const plankUsage = {};
             largePlanks.forEach(plank => {
                 plankUsage[plank.id] = 0;
             });
 
             while (remainingPieces.length > 0) {
-                // Trouver la meilleure planche pour la première pièce restante
-                const piece = remainingPieces[0];
-                let bestPlank = null;
+                let bestOption = null;
                 let bestEfficiency = 0;
-
-                for (const plank of largePlanks) {
-                    if (plank.maxQuantity && plankUsage[plank.id] >= plank.maxQuantity) continue;
+                
+                // Tester chaque type de grande planche
+                for (const plankType of largePlanks) {
+                    // Vérifier si on peut encore utiliser ce type de planche
+                    if (plankType.maxQuantity && plankUsage[plankType.id] >= plankType.maxQuantity) {
+                        continue;
+                    }
                     
-                    const fitsNormal = piece.width <= plank.width && piece.height <= plank.height;
-                    const fitsRotated = piece.height <= plank.width && piece.width <= plank.height;
+                    const arrangement = calculateBestArrangement(remainingPieces, plankType, sawThickness);
+                    const costPerArea = plankType.price / (plankType.width * plankType.height);
+                    const efficiency = arrangement.efficiency / costPerArea;
                     
-                    if (fitsNormal || fitsRotated) {
-                        const efficiency = (piece.width * piece.height) / (plank.width * plank.height);
-                        if (efficiency > bestEfficiency) {
-                            bestEfficiency = efficiency;
-                            bestPlank = plank;
-                        }
+                    if (efficiency > bestEfficiency && arrangement.pieces.length > 0) {
+                        bestEfficiency = efficiency;
+                        bestOption = {
+                            plankType,
+                            arrangement,
+                            costPerArea
+                        };
                     }
                 }
-
-                if (bestPlank) {
-                    const rotated = !(piece.width <= bestPlank.width && piece.height <= bestPlank.height);
-                    solution.push({
-                        plankType: bestPlank,
-                        arrangement: {
-                            pieces: [{
-                                ...piece,
-                                name: getPieceDisplayNumber(piece.id),
-                                rotated,
-                                x: 0,
-                                y: 0,
-                                displayWidth: rotated ? piece.height : piece.width,
-                                displayHeight: rotated ? piece.width : piece.height
-                            }],
-                            efficiency: bestEfficiency
-                        }
-                    });
-                    plankUsage[bestPlank.id]++;
-                    remainingPieces.shift();
+                
+                if (bestOption) {
+                    solution.push(bestOption);
+                    plankUsage[bestOption.plankType.id]++;
+                    // Retirer les pièces utilisées
+                    remainingPieces = remainingPieces.filter(piece => 
+                        !bestOption.arrangement.pieces.some(used => used.instanceId === piece.instanceId)
+                    );
                 } else {
-                    break;
+                    // Si aucune pièce ne peut être placée, essayer avec les planches disponibles
+                    const piece = remainingPieces[0];
+                    const availablePlanks = largePlanks.filter(plank => 
+                        !plank.maxQuantity || plankUsage[plank.id] < plank.maxQuantity
+                    );
+                    
+                    const suitablePlank = availablePlanks.find(plank => {
+                        const fitNormal = piece.width <= plank.width && piece.height <= plank.height;
+                        const fitRotated = piece.height <= plank.width && piece.width <= plank.height;
+                        return fitNormal || fitRotated;
+                    });
+                    
+                    if (suitablePlank) {
+                        const rotated = !(piece.width <= suitablePlank.width && piece.height <= suitablePlank.height);
+                        solution.push({
+                            plankType: suitablePlank,
+                            arrangement: { 
+                                pieces: [{
+                                    ...piece,
+                                    rotated,
+                                    x: 0,
+                                    y: 0,
+                                    displayWidth: rotated ? piece.height : piece.width,
+                                    displayHeight: rotated ? piece.width : piece.height
+                                }], 
+                                totalValue: piece.width * piece.height,
+                                efficiency: (piece.width * piece.height) / (suitablePlank.width * suitablePlank.height)
+                            },
+                            costPerArea: suitablePlank.price / (suitablePlank.width * suitablePlank.height)
+                        });
+                        plankUsage[suitablePlank.id]++;
+                        remainingPieces = remainingPieces.filter(p => p.instanceId !== piece.instanceId);
+                    } else {
+                        break; // Impossible de placer cette pièce
+                    }
                 }
             }
 
@@ -588,9 +618,126 @@
                 solution,
                 totalCost: solution.reduce((sum, s) => sum + s.plankType.price, 0),
                 totalPlanks: solution.length,
-                remainingPieces: remainingPieces,
+                remainingPieces,
                 plankUsage
             };
+        }
+
+        // Calculer le meilleur arrangement pour une planche
+        function calculateBestArrangement(pieces, plankType, sawThickness) {
+            const arrangements = [];
+            
+            // Fonction récursive pour placer les pièces
+            function placePieces(remainingPieces, placedPieces = []) {
+                if (placedPieces.length > 0) {
+                    const totalValue = placedPieces.reduce((sum, p) => sum + (p.width * p.height), 0);
+                    arrangements.push({
+                        pieces: [...placedPieces],
+                        totalValue,
+                        efficiency: totalValue / (plankType.width * plankType.height)
+                    });
+                }
+
+                // Essayer d'ajouter chaque pièce restante
+                for (let i = 0; i < remainingPieces.length; i++) {
+                    const piece = remainingPieces[i];
+                    
+                    // Essayer les deux orientations
+                    const orientations = [
+                        { width: piece.width, height: piece.height, rotated: false },
+                        { width: piece.height, height: piece.width, rotated: true }
+                    ];
+                    
+                    for (const orientation of orientations) {
+                        const position = findBestPosition(orientation, placedPieces, plankType, sawThickness);
+                        if (position) {
+                            const newPiece = {
+                                ...piece,
+                                rotated: orientation.rotated,
+                                x: position.x,
+                                y: position.y,
+                                displayWidth: orientation.width,
+                                displayHeight: orientation.height
+                            };
+                            
+                            placePieces(
+                                remainingPieces.filter((_, idx) => idx !== i),
+                                [...placedPieces, newPiece]
+                            );
+                        }
+                    }
+                }
+            }
+
+            // Trouver la meilleure position pour une pièce
+            function findBestPosition(piece, placedPieces, plankType, sawThickness) {
+                // Essayer de placer en (0,0) si c'est la première pièce
+                if (placedPieces.length === 0) {
+                    if (piece.width <= plankType.width && piece.height <= plankType.height) {
+                        return { x: 0, y: 0 };
+                    }
+                    return null;
+                }
+
+                // Générer les positions possibles
+                const positions = [];
+                
+                // Positions à droite des pièces existantes
+                placedPieces.forEach(existing => {
+                    positions.push({
+                        x: existing.x + existing.displayWidth + sawThickness,
+                        y: existing.y
+                    });
+                });
+                
+                // Positions en dessous des pièces existantes
+                placedPieces.forEach(existing => {
+                    positions.push({
+                        x: existing.x,
+                        y: existing.y + existing.displayHeight + sawThickness
+                    });
+                });
+
+                // Trier les positions par x puis par y (placement de gauche à droite, haut en bas)
+                positions.sort((a, b) => a.x - b.x || a.y - b.y);
+
+                // Tester chaque position
+                for (const pos of positions) {
+                    if (canPlaceAt(piece, pos, placedPieces, plankType, sawThickness)) {
+                        return pos;
+                    }
+                }
+                
+                return null;
+            }
+
+            // Vérifier si une pièce peut être placée à une position donnée
+            function canPlaceAt(piece, position, placedPieces, plankType, sawThickness) {
+                // Vérifier les limites de la planche
+                if (position.x + piece.width > plankType.width || 
+                    position.y + piece.height > plankType.height) {
+                    return false;
+                }
+
+                // Vérifier les collisions avec les pièces existantes
+                for (const existing of placedPieces) {
+                    if (!(position.x >= existing.x + existing.displayWidth + sawThickness ||
+                          position.x + piece.width + sawThickness <= existing.x ||
+                          position.y >= existing.y + existing.displayHeight + sawThickness ||
+                          position.y + piece.height + sawThickness <= existing.y)) {
+                        return false;
+                    }
+                }
+                
+                return true;
+            }
+
+            placePieces(pieces);
+            
+            // Retourner le meilleur arrangement
+            return arrangements.reduce((best, current) => 
+                current.totalValue > best.totalValue ? current : best
+            , { pieces: [], totalValue: 0, efficiency: 0 });
         }
 
         function displayResults(solution) {
@@ -713,14 +860,14 @@
                     <h4 class="font-semibold mb-2">${generatePlankName(plankType.width, plankType.height)} - ${plankType.price}€</h4>
                     <div class="flex justify-center">
                         <div class="relative border-2 border-amber-800 bg-amber-100" style="width: ${displayWidth}px; height: ${displayHeight}px;">
-                            ${arrangement.pieces.map(piece => {
-                                const color = colors[piece.id % colors.length];
+                            ${arrangement.pieces.map((piece, pieceIndex) => {
+                                const color = colors[piece.originalIndex % colors.length];
                                 return `
                                     <div class="absolute border border-gray-700 ${color} flex items-center justify-center text-xs font-bold shadow-sm"
                                          style="width: ${piece.displayWidth * scale}px; height: ${piece.displayHeight * scale}px; left: ${piece.x * scale}px; top: ${piece.y * scale}px;">
                                         <div class="text-center leading-tight">
                                             <div class="font-bold">${piece.name}</div>
-                                            <div class="text-xs">${piece.width || piece.displayWidth}×${piece.height || piece.displayHeight}</div>
+                                            <div class="text-xs">${piece.width}×${piece.height}</div>
                                             ${piece.rotated ? '<div class="text-xs">↻</div>' : ''}
                                         </div>
                                     </div>
