@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimiseur de Découpe de Planches</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        /* Styles personnalisés pour les icônes */
+        .lucide {
+            display: inline-block;
+            width: 1.25rem;
+            height: 1.25rem;
+            vertical-align: text-bottom;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div id="app" class="max-w-6xl mx-auto p-6 bg-white min-h-screen">
+        <!-- Header -->
+        <div class="mb-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2 flex items-center gap-2">
+                <i data-lucide="scissors" class="text-blue-600"></i>
+                Optimiseur de Découpe de Planches
+            </h1>
+            <p class="text-gray-600">
+                Outil interactif pour optimiser le coût total des grandes planches
+            </p>
+        </div>
+
+        <!-- Configuration -->
+        <div class="grid md:grid-cols-2 gap-6 mb-6">
+            <!-- Paramètres généraux -->
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <h3 class="font-semibold text-gray-800 mb-3">Paramètres généraux</h3>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Largeur de scie (mm)
+                        </label>
+                        <input
+                            type="number"
+                            id="sawThickness"
+                            value="10"
+                            min="0"
+                            max="50"
+                            class="w-full p-2 border border-gray-300 rounded-md"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grandes planches -->
+            <div class="bg-blue-50 p-4 rounded-lg">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-semibold text-blue-800 flex items-center gap-2">
+                        <i data-lucide="package" class="w-5 h-5"></i>
+                        Grandes planches disponibles
+                    </h3>
+                    <button
+                        onclick="addNewPlank()"
+                        class="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 flex items-center gap-1"
+                    >
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        Ajouter
+                    </button>
+                </div>
+                
+                <div id="planks-container" class="space-y-2">
+                    <!-- Les planches seront ajoutées ici par JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Pièces à découper -->
+        <div class="bg-green-50 p-4 rounded-lg mb-6">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-semibold text-green-800 flex items-center gap-2">
+                    <i data-lucide="calculator" class="w-5 h-5"></i>
+                    Pièces à découper
+                </h3>
+                <button
+                    onclick="showDeleteAllModal()"
+                    id="deleteAllBtn"
+                    class="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 flex items-center gap-1"
+                    disabled
+                >
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    Tout supprimer
+                </button>
+            </div>
+            
+            <div id="pieces-container" class="grid gap-2">
+                <!-- Les pièces seront ajoutées ici par JavaScript -->
+            </div>
+            
+            <div class="mt-3 text-xs text-green-700">
+                Tapez Tab après la hauteur pour passer à la pièce suivante. Utilisez "Copier" pour reprendre les dimensions de la pièce précédente.
+            </div>
+        </div>
+
+        <!-- Bouton de calcul -->
+        <div class="text-center mb-6">
+            <button
+                onclick="optimizeCutting()"
+                id="calculateBtn"
+                class="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 mx-auto text-lg font-semibold"
+            >
+                <i data-lucide="calculator" class="w-5 h-5"></i>
+                Calculer l'optimisation
+            </button>
+        </div>
+
+        <!-- Résultats -->
+        <div id="results-container" class="hidden">
+            <!-- Les résultats seront affichés ici -->
+        </div>
+    </div>
+
+    <!-- Modales -->
+    <div id="plank-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+            <h3 class="text-lg font-semibold mb-4" id="modal-title">
+                Nouvelle planche
+            </h3>
+            
+            <div class="space-y-4">            
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Largeur (mm)</label>
+                        <input
+                            type="number"
+                            id="modal-width"
+                            class="w-full p-2 border border-gray-300 rounded-md"
+                        />
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Hauteur (mm)</label>
+                        <input
+                            type="number"
+                            id="modal-height"
+                            class="w-full p-2 border border-gray-300 rounded-md"
+                        />
+                    </div>
+                </div>
+                
+                <div class="text-sm text-gray-600 bg-gray-50 p-2 rounded" id="generated-name">
+                    Nom généré automatiquement : <strong>100x40cm</strong>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Prix (€)</label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            id="modal-price"
+                            class="w-full p-2 border border-gray-300 rounded-md"
+                        />
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Quantité max</label>
+                        <input
+                            type="number"
+                            id="modal-max-quantity"
+                            class="w-full p-2 border border-gray-300 rounded-md"
+                            placeholder="Illimité"
+                        />
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-end gap-2 mt-6">
+                <button
+                    onclick="closePlankModal()"
+                    class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-md flex items-center gap-2"
+                >
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                    Annuler
+                </button>
+                <button
+                    onclick="savePlank()"
+                    class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
+                >
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    Sauvegarder
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="delete-all-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+            <h3 class="text-lg font-semibold mb-4 text-red-800">
+                Supprimer toutes les pièces
+            </h3>
+            
+            <p class="text-gray-700 mb-6">
+                Êtes-vous sûr de vouloir supprimer toutes les pièces à découper ? 
+                Cette action est irréversible et effacera également les résultats de calcul.
+            </p>
+            
+            <div class="flex justify-end gap-2">
+                <button
+                    onclick="closeDeleteAllModal()"
+                    class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-md flex items-center gap-2"
+                >
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                    Annuler
+                </button>
+                <button
+                    onclick="deleteAllPieces()"
+                    class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center gap-2"
+                >
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    Supprimer tout
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let largePlanks = [
+            { id: 1, width: 900, height: 400, price: 7.92, maxQuantity: null },
+            { id: 2, width: 1360, height: 400, price: 11.74, maxQuantity: null },
+            { id: 3, width: 1810, height: 400, price: 17.73, maxQuantity: null }
+        ];
+
+        let pieces = [
+            { id: 1, width: 700, height: 200 },
+            { id: 2, width: 720, height: 200 },
+            { id: 3, width: 710, height: 200 },
+            { id: 4, width: 700, height: 200 },
+            { id: 5, width: 720, height: 200 },
+            { id: 6, width: 710, height: 200 },
+            { id: 7, width: 700, height: 200 },
+            { id: 8, width: 1130, height: 200 },
+            { id: 9, width: 840, height: 200 },
+            { id: 10, width: 1150, height: 200 },
+            { id: 11, width: 690, height: 200 },
+            { id: 12, width: 800, height: 200 },
+            { id: 13, width: 780, height: 200 },
+            { id: 14, width: 640, height: 200 },
+            { id: 15, width: '', height: '' }
+        ];
+
+        let currentEditingPlank = null;
+        let results = null;
+
+        // Fonctions utilitaires
+        function generatePlankName(width, height) {
+            return `${Math.round(width/10)}x${Math.round(height/10)}cm`;
+        }
+
+        function getPieceDisplayNumber(pieceId) {
+            const validPieces = pieces.filter(p => p.width && p.height);
+            const pieceIndex = validPieces.findIndex(p => p.id === pieceId);
+            return pieceIndex >= 0 ? pieceIndex + 1 : 'Nouveau';
+        }
+
+        // Initialisation
+        function init() {
+            renderPlanks();
+            renderPieces();
+            lucide.createIcons();
+        }
+
+        // Rendu des planches
+        function renderPlanks() {
+            const container = document.getElementById('planks-container');
+            container.innerHTML = '';
+            
+            largePlanks.forEach(plank => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between p-2 bg-white rounded border';
+                div.innerHTML = `
+                    <div class="flex-1">
+                        <div class="font-medium">${generatePlankName(plank.width, plank.height)}</div>
+                        <div class="text-sm text-gray-600">
+                            ${plank.width}×${plank.height}mm - ${plank.price}€
+                            ${plank.maxQuantity ? `(max: ${plank.maxQuantity})` : ''}
+                        </div>
+                    </div>
+                    <div class="flex gap-1">
+                        <button
+                            onclick="editPlank(${plank.id})"
+                            class="p-1 text-blue-600 hover:bg-blue-100 rounded"
+                        >
+                            <i data-lucide="edit-2" class="w-4 h-4"></i>
+                        </button>
+                        <button
+                            onclick="deletePlank(${plank.id})"
+                            class="p-1 text-red-600 hover:bg-red-100 rounded"
+                        >
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+            
+            lucide.createIcons();
+        }
+
+        // Rendu des pièces
+        function renderPieces() {
+            const container = document.getElementById('pieces-container');
+            container.innerHTML = '';
+            
+            pieces.forEach((piece, index) => {
+                const isLastPiece = index === pieces.length - 1;
+                const displayNumber = getPieceDisplayNumber(piece.id);
+                const previousPiece = index > 0 ? pieces[index - 1] : null;
+                const canCopyPrevious = isLastPiece && !piece.width && !piece.height && previousPiece && previousPiece.width && previousPiece.height;
+                
+                const div = document.createElement('div');
+                div.className = 'flex items-center gap-3 p-2 bg-white rounded border';
+                div.innerHTML = `
+                    <div class="font-medium text-green-800 w-12 text-sm">
+                        ${displayNumber}
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-medium text-gray-700">Largeur:</label>
+                        <input
+                            type="number"
+                            value="${piece.width}"
+                            onchange="updatePiece(${piece.id}, 'width', this.value)"
+                            class="w-20 p-1 border border-gray-300 rounded text-sm"
+                            min="1"
+                            placeholder="mm"
+                        />
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-medium text-gray-700">Hauteur:</label>
+                        <input
+                            type="number"
+                            value="${piece.height}"
+                            onchange="updatePiece(${piece.id}, 'height', this.value)"
+                            onkeydown="handleHeightKeyDown(event, ${piece.id})"
+                            class="w-20 p-1 border border-gray-300 rounded text-sm"
+                            min="1"
+                            placeholder="mm"
+                        />
+                    </div>
+                    
+                    <div class="flex items-center gap-1">
+                        ${canCopyPrevious ? `
+                            <button
+                                onclick="copyPreviousPiece(${piece.id})"
+                                class="px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded hover:bg-blue-200"
+                                title="Copier la pièce précédente (${previousPiece.width}×${previousPiece.height})"
+                            >
+                                Copier
+                            </button>
+                        ` : ''}
+                        
+                        ${!isLastPiece ? `
+                            <button
+                                onclick="deletePiece(${piece.id})"
+                                class="p-1 text-red-600 hover:bg-red-100 rounded"
+                            >
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+            
+            // Mettre à jour le bouton "Tout supprimer"
+            const deleteAllBtn = document.getElementById('deleteAllBtn');
+            const hasValidPieces = pieces.filter(p => p.width && p.height).length > 0;
+            deleteAllBtn.disabled = !hasValidPieces;
+            
+            lucide.createIcons();
+        }
+
+        // Gestion des planches
+        function addNewPlank() {
+            currentEditingPlank = null;
+            document.getElementById('modal-title').textContent = 'Nouvelle planche';
+            document.getElementById('modal-width').value = '1000';
+            document.getElementById('modal-height').value = '400';
+            document.getElementById('modal-price').value = '10.00';
+            document.getElementById('modal-max-quantity').value = '';
+            updateGeneratedName();
+            document.getElementById('plank-modal').classList.remove('hidden');
+        }
+
+        function editPlank(id) {
+            const plank = largePlanks.find(p => p.id === id);
+            currentEditingPlank = plank;
+            document.getElementById('modal-title').textContent = 'Modifier la planche';
+            document.getElementById('modal-width').value = plank.width;
+            document.getElementById('modal-height').value = plank.height;
+            document.getElementById('modal-price').value = plank.price;
+            document.getElementById('modal-max-quantity').value = plank.maxQuantity || '';
+            updateGeneratedName();
+            document.getElementById('plank-modal').classList.remove('hidden');
+        }
+
+        function updateGeneratedName() {
+            const width = parseInt(document.getElementById('modal-width').value) || 0;
+            const height = parseInt(document.getElementById('modal-height').value) || 0;
+            document.getElementById('generated-name').innerHTML = 
+                `Nom généré automatiquement : <strong>${generatePlankName(width, height)}</strong>`;
+        }
+
+        function savePlank() {
+            const width = parseInt(document.getElementById('modal-width').value);
+            const height = parseInt(document.getElementById('modal-height').value);
+            const price = parseFloat(document.getElementById('modal-price').value);
+            const maxQuantity = document.getElementById('modal-max-quantity').value ? 
+                parseInt(document.getElementById('modal-max-quantity').value) : null;
+
+            if (currentEditingPlank) {
+                // Modification
+                currentEditingPlank.width = width;
+                currentEditingPlank.height = height;
+                currentEditingPlank.price = price;
+                currentEditingPlank.maxQuantity = maxQuantity;
+            } else {
+                // Nouvelle planche
+                const newId = Math.max(...largePlanks.map(p => p.id), 0) + 1;
+                largePlanks.push({ id: newId, width, height, price, maxQuantity });
+            }
+
+            closePlankModal();
+            renderPlanks();
+        }
+
+        function deletePlank(id) {
+            largePlanks = largePlanks.filter(p => p.id !== id);
+            renderPlanks();
+        }
+
+        function closePlankModal() {
+            document.getElementById('plank-modal').classList.add('hidden');
+        }
+
+        // Gestion des pièces
+        function updatePiece(id, field, value) {
+            const piece = pieces.find(p => p.id === id);
+            if (piece) {
+                piece[field] = value ? parseInt(value) : '';
+                
+                // Si c'est la dernière pièce et qu'elle est complète, ajouter une nouvelle ligne
+                const isLastPiece = id === Math.max(...pieces.map(p => p.id));
+                if (isLastPiece && piece.width && piece.height) {
+                    const newId = Math.max(...pieces.map(p => p.id)) + 1;
+                    pieces.push({ id: newId, width: '', height: '' });
+                }
+                
+                renderPieces();
+            }
+        }
+
+        function deletePiece(id) {
+            pieces = pieces.filter(p => p.id !== id);
+            renderPieces();
+        }
+
+        function copyPreviousPiece(currentId) {
+            const currentIndex = pieces.findIndex(p => p.id === currentId);
+            if (currentIndex > 0) {
+                const previousPiece = pieces[currentIndex - 1];
+                updatePiece(currentId, 'width', previousPiece.width);
+                updatePiece(currentId, 'height', previousPiece.height);
+            }
+        }
+
+        function handleHeightKeyDown(event, currentId) {
+            if (event.key === 'Tab' && !event.shiftKey) {
+                event.preventDefault();
+                const nextId = currentId + 1;
+                setTimeout(() => {
+                    const nextInput = document.querySelector(`input[onchange*="updatePiece(${nextId}, 'width'"]`);
+                    if (nextInput) {
+                        nextInput.focus();
+                    }
+                }, 10);
+            }
+        }
+
+        function showDeleteAllModal() {
+            document.getElementById('delete-all-modal').classList.remove('hidden');
+        }
+
+        function closeDeleteAllModal() {
+            document.getElementById('delete-all-modal').classList.add('hidden');
+        }
+
+        function deleteAllPieces() {
+            pieces = [{ id: 1, width: '', height: '' }];
+            results = null;
+            document.getElementById('results-container').classList.add('hidden');
+            closeDeleteAllModal();
+            renderPieces();
+        }
+
+        // Algorithme d'optimisation complet
+        function optimizeCutting() {
+            const sawThickness = parseInt(document.getElementById('sawThickness').value) || 10;
+            const validPieces = pieces.filter(p => p.width && p.height);
+            
+            if (validPieces.length === 0) {
+                alert('Aucune pièce à découper !');
+                return;
+            }
+
+            const btn = document.getElementById('calculateBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>Calcul en cours...';
+
+            // Calcul réel avec l'algorithme complet
+            setTimeout(() => {
+                const solution = calculateOptimalCutting(validPieces, sawThickness);
+                displayResults(solution);
+                
+                btn.disabled = false;
+                btn.innerHTML = '<i data-lucide="calculator" class="w-5 h-5"></i>Calculer l\'optimisation';
+                lucide.createIcons();
+            }, 1000);
+        }
+
+        function calculateOptimalCutting(validPieces, sawThickness) {
+            const solution = [];
+            let remainingPieces = validPieces.map((piece, index) => ({
+                ...piece,
+                instanceId: `piece-${piece.id}`,
+                name: `${index + 1}`,
+                originalIndex: index
+            }));
+            
+            const plankUsage = {};
+            largePlanks.forEach(plank => {
+                plankUsage[plank.id] = 0;
+            });
+
+            while (remainingPieces.length > 0) {
+                let bestOption = null;
+                let bestEfficiency = 0;
+                
+                // Tester chaque type de grande planche
+                for (const plankType of largePlanks) {
+                    // Vérifier si on peut encore utiliser ce type de planche
+                    if (plankType.maxQuantity && plankUsage[plankType.id] >= plankType.maxQuantity) {
+                        continue;
+                    }
+                    
+                    const arrangement = calculateBestArrangement(remainingPieces, plankType, sawThickness);
+                    const costPerArea = plankType.price / (plankType.width * plankType.height);
+                    const efficiency = arrangement.efficiency / costPerArea;
+                    
+                    if (efficiency > bestEfficiency && arrangement.pieces.length > 0) {
+                        bestEfficiency = efficiency;
+                        bestOption = {
+                            plankType,
+                            arrangement,
+                            costPerArea
+                        };
+                    }
+                }
+                
+                if (bestOption) {
+                    solution.push(bestOption);
+                    plankUsage[bestOption.plankType.id]++;
+                    // Retirer les pièces utilisées
+                    remainingPieces = remainingPieces.filter(piece => 
+                        !bestOption.arrangement.pieces.some(used => used.instanceId === piece.instanceId)
+                    );
+                } else {
+                    // Si aucune pièce ne peut être placée, essayer avec les planches disponibles
+                    const piece = remainingPieces[0];
+                    const availablePlanks = largePlanks.filter(plank => 
+                        !plank.maxQuantity || plankUsage[plank.id] < plank.maxQuantity
+                    );
+                    
+                    const suitablePlank = availablePlanks.find(plank => {
+                        const fitNormal = piece.width <= plank.width && piece.height <= plank.height;
+                        const fitRotated = piece.height <= plank.width && piece.width <= plank.height;
+                        return fitNormal || fitRotated;
+                    });
+                    
+                    if (suitablePlank) {
+                        const rotated = !(piece.width <= suitablePlank.width && piece.height <= suitablePlank.height);
+                        solution.push({
+                            plankType: suitablePlank,
+                            arrangement: { 
+                                pieces: [{
+                                    ...piece,
+                                    rotated,
+                                    x: 0,
+                                    y: 0,
+                                    displayWidth: rotated ? piece.height : piece.width,
+                                    displayHeight: rotated ? piece.width : piece.height
+                                }], 
+                                totalValue: piece.width * piece.height,
+                                efficiency: (piece.width * piece.height) / (suitablePlank.width * suitablePlank.height)
+                            },
+                            costPerArea: suitablePlank.price / (suitablePlank.width * suitablePlank.height)
+                        });
+                        plankUsage[suitablePlank.id]++;
+                        remainingPieces = remainingPieces.filter(p => p.instanceId !== piece.instanceId);
+                    } else {
+                        break; // Impossible de placer cette pièce
+                    }
+                }
+            }
+
+            return {
+                solution,
+                totalCost: solution.reduce((sum, s) => sum + s.plankType.price, 0),
+                totalPlanks: solution.length,
+                remainingPieces,
+                plankUsage
+            };
+        }
+
+        // Calculer le meilleur arrangement pour une planche
+        function calculateBestArrangement(pieces, plankType, sawThickness) {
+            const arrangements = [];
+            
+            // Fonction récursive pour placer les pièces
+            function placePieces(remainingPieces, placedPieces = []) {
+                if (placedPieces.length > 0) {
+                    const totalValue = placedPieces.reduce((sum, p) => sum + (p.width * p.height), 0);
+                    arrangements.push({
+                        pieces: [...placedPieces],
+                        totalValue,
+                        efficiency: totalValue / (plankType.width * plankType.height)
+                    });
+                }
+
+                // Essayer d'ajouter chaque pièce restante
+                for (let i = 0; i < remainingPieces.length; i++) {
+                    const piece = remainingPieces[i];
+                    
+                    // Essayer les deux orientations
+                    const orientations = [
+                        { width: piece.width, height: piece.height, rotated: false },
+                        { width: piece.height, height: piece.width, rotated: true }
+                    ];
+                    
+                    for (const orientation of orientations) {
+                        const position = findBestPosition(orientation, placedPieces, plankType, sawThickness);
+                        if (position) {
+                            const newPiece = {
+                                ...piece,
+                                rotated: orientation.rotated,
+                                x: position.x,
+                                y: position.y,
+                                displayWidth: orientation.width,
+                                displayHeight: orientation.height
+                            };
+                            
+                            placePieces(
+                                remainingPieces.filter((_, idx) => idx !== i),
+                                [...placedPieces, newPiece]
+                            );
+                        }
+                    }
+                }
+            }
+
+            // Trouver la meilleure position pour une pièce
+            function findBestPosition(piece, placedPieces, plankType, sawThickness) {
+                // Essayer de placer en (0,0) si c'est la première pièce
+                if (placedPieces.length === 0) {
+                    if (piece.width <= plankType.width && piece.height <= plankType.height) {
+                        return { x: 0, y: 0 };
+                    }
+                    return null;
+                }
+
+                // Générer les positions possibles
+                const positions = [];
+                
+                // Positions à droite des pièces existantes
+                placedPieces.forEach(existing => {
+                    positions.push({
+                        x: existing.x + existing.displayWidth + sawThickness,
+                        y: existing.y
+                    });
+                });
+                
+                // Positions en dessous des pièces existantes
+                placedPieces.forEach(existing => {
+                    positions.push({
+                        x: existing.x,
+                        y: existing.y + existing.displayHeight + sawThickness
+                    });
+                });
+
+                // Trier les positions par x puis par y (placement de gauche à droite, haut en bas)
+                positions.sort((a, b) => a.x - b.x || a.y - b.y);
+
+                // Tester chaque position
+                for (const pos of positions) {
+                    if (canPlaceAt(piece, pos, placedPieces, plankType, sawThickness)) {
+                        return pos;
+                    }
+                }
+                
+                return null;
+            }
+
+            // Vérifier si une pièce peut être placée à une position donnée
+            function canPlaceAt(piece, position, placedPieces, plankType, sawThickness) {
+                // Vérifier les limites de la planche
+                if (position.x + piece.width > plankType.width || 
+                    position.y + piece.height > plankType.height) {
+                    return false;
+                }
+
+                // Vérifier les collisions avec les pièces existantes
+                for (const existing of placedPieces) {
+                    if (!(position.x >= existing.x + existing.displayWidth + sawThickness ||
+                          position.x + piece.width + sawThickness <= existing.x ||
+                          position.y >= existing.y + existing.displayHeight + sawThickness ||
+                          position.y + piece.height + sawThickness <= existing.y)) {
+                        return false;
+                    }
+                }
+                
+                return true;
+            }
+
+            placePieces(pieces);
+            
+            // Retourner le meilleur arrangement
+            return arrangements.reduce((best, current) => 
+                current.totalValue > best.totalValue ? current : best
+            , { pieces: [], totalValue: 0, efficiency: 0 });
+        }
+
+        function displayResults(solution) {
+            const container = document.getElementById('results-container');
+            container.innerHTML = `
+                <div class="space-y-6">
+                    <div class="bg-green-100 p-4 rounded-lg">
+                        <h3 class="font-semibold text-green-800 mb-2 flex items-center gap-2">
+                            <i data-lucide="euro" class="w-5 h-5"></i>
+                            Résultat de l'optimisation
+                        </h3>
+                        <div class="grid md:grid-cols-3 gap-4">
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-green-600">
+                                    ${solution.totalCost.toFixed(2)}€
+                                </div>
+                                <div class="text-sm text-gray-600">Coût total</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-blue-600">
+                                    ${solution.totalPlanks}
+                                </div>
+                                <div class="text-sm text-gray-600">Grandes planches</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-purple-600">
+                                    ${pieces.filter(p => p.width && p.height).length - solution.remainingPieces.length}
+                                </div>
+                                <div class="text-sm text-gray-600">Pièces placées</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                            <i data-lucide="package" class="w-5 h-5"></i>
+                            Récapitulatif des planches à commander
+                        </h3>
+                        <div class="space-y-2">
+                            ${generatePlankSummary(solution)}
+                            <div class="border-t pt-2 mt-3">
+                                <div class="flex justify-between items-center font-bold text-lg">
+                                    <span>Total à commander :</span>
+                                    <span class="text-blue-600">${solution.totalCost.toFixed(2)}€</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="font-semibold text-gray-800 mb-4">Plan de découpe détaillé</h3>
+                        <div class="space-y-4">
+                            ${solution.solution.map((item, index) => generatePlankVisualization(item, index)).join('')}
+                        </div>
+                    </div>
+
+                    ${solution.remainingPieces.length > 0 ? `
+                        <div class="bg-red-50 p-4 rounded-lg">
+                            <h3 class="font-semibold text-red-800 mb-2">
+                                Pièces non placées (${solution.remainingPieces.length})
+                            </h3>
+                            <div class="text-sm text-red-600">
+                                ${solution.remainingPieces.map(p => getPieceDisplayNumber(p.id)).join(', ')}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            container.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function generatePlankSummary(solution) {
+            const summary = {};
+            solution.solution.forEach(item => {
+                const plankName = generatePlankName(item.plankType.width, item.plankType.height);
+                if (!summary[plankName]) {
+                    summary[plankName] = { count: 0, price: item.plankType.price, dimensions: `${item.plankType.width}×${item.plankType.height}mm` };
+                }
+                summary[plankName].count++;
+            });
+
+            return Object.entries(summary).map(([name, data]) => `
+                <div class="flex justify-between items-center p-2 bg-white rounded border">
+                    <div>
+                        <span class="font-medium">${name}</span>
+                        <span class="text-sm text-gray-600 ml-2">(${data.dimensions})</span>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-semibold text-blue-600">
+                            ${data.count} planche${data.count > 1 ? 's' : ''}
+                        </div>
+                        <div class="text-sm text-gray-600">
+                            ${data.count} × ${data.price}€ = ${(data.count * data.price).toFixed(2)}€
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function generatePlankVisualization(item, index) {
+            const plankType = item.plankType;
+            const arrangement = item.arrangement;
+            
+            // Calculer l'échelle pour maintenir les proportions réelles
+            const maxDisplayWidth = 400;
+            const maxDisplayHeight = 200;
+            const scaleX = maxDisplayWidth / plankType.width;
+            const scaleY = maxDisplayHeight / plankType.height;
+            const scale = Math.min(scaleX, scaleY);
+            
+            const displayWidth = plankType.width * scale;
+            const displayHeight = plankType.height * scale;
+            
+            const colors = ['bg-blue-300', 'bg-green-300', 'bg-red-300', 'bg-purple-300', 'bg-yellow-300', 'bg-pink-300', 'bg-indigo-300', 'bg-orange-300'];
+            
+            return `
+                <div class="border border-gray-300 p-4 bg-amber-50">
+                    <h4 class="font-semibold mb-2">${generatePlankName(plankType.width, plankType.height)} - ${plankType.price}€</h4>
+                    <div class="flex justify-center">
+                        <div class="relative border-2 border-amber-800 bg-amber-100" style="width: ${displayWidth}px; height: ${displayHeight}px;">
+                            ${arrangement.pieces.map((piece, pieceIndex) => {
+                                const color = colors[piece.originalIndex % colors.length];
+                                return `
+                                    <div class="absolute border border-gray-700 ${color} flex items-center justify-center text-xs font-bold shadow-sm"
+                                         style="width: ${piece.displayWidth * scale}px; height: ${piece.displayHeight * scale}px; left: ${piece.x * scale}px; top: ${piece.y * scale}px;">
+                                        <div class="text-center leading-tight">
+                                            <div class="font-bold">${piece.name}</div>
+                                            <div class="text-xs">${piece.width}×${piece.height}</div>
+                                            ${piece.rotated ? '<div class="text-xs">↻</div>' : ''}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                    <div class="mt-2 text-sm text-gray-600 text-center">
+                        Pièces: ${arrangement.pieces.length} | 
+                        Efficacité: ${(arrangement.efficiency * 100).toFixed(1)}%
+                    </div>
+                    <div class="mt-1 text-xs text-gray-500 text-center">
+                        Dimensions: ${plankType.width}×${plankType.height}mm | Échelle: 1:${Math.round(1/scale)}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Event listeners pour les modales
+        document.getElementById('modal-width').addEventListener('input', updateGeneratedName);
+        document.getElementById('modal-height').addEventListener('input', updateGeneratedName);
+
+        // Initialisation au chargement de la page
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
+                        
