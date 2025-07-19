@@ -506,5 +506,3 @@ const EscalierMesuresApp = () => {
     </div>
   );
 };
-
-export default EscalierMesuresApp;
