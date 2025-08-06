@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calculator, Download, Plus, Trash2, X, Copy } from 'lucide-react';
+import { Calculator, Download, Plus, Trash2, X, Copy, ArrowRight } from 'lucide-react';
 
 const StairMeasurementApp = () => {
   const [projectName, setProjectName] = useState('');
@@ -395,21 +395,33 @@ const StairMeasurementApp = () => {
         </div>
       )}
 
-      {/* Bouton d'export */}
-      <div className="text-center">
-        <button
-          onClick={exportData}
-          disabled={validSteps.length === 0}
-          className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto text-lg font-semibold"
-        >
-          <Download className="w-5 h-5" />
-          Exporter les mesures
-          {validSteps.length > 0 && <span className="text-sm">({validSteps.length} marche{validSteps.length > 1 ? 's' : ''})</span>}
-        </button>
+      {/* Boutons d'action */}
+      <div className="text-center space-y-4">
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <button
+            onClick={exportData}
+            disabled={validSteps.length === 0}
+            className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-lg font-semibold"
+          >
+            <Download className="w-5 h-5" />
+            Exporter les mesures
+            {validSteps.length > 0 && <span className="text-sm">({validSteps.length} marche{validSteps.length > 1 ? 's' : ''})</span>}
+          </button>
+          
+          {validSteps.length > 0 && (
+            <a
+              href="/Sublimarches/optimiseur/step2/"
+              className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 text-lg font-semibold"
+            >
+              <ArrowRight className="w-5 h-5" />
+              Passer à l'étape 2
+            </a>
+          )}
+        </div>
         
         {validSteps.length === 0 && (
-          <p className="text-sm text-gray-500 mt-2">
-            Ajoutez au moins une marche complète pour pouvoir exporter
+          <p className="text-sm text-gray-500">
+            Ajoutez au moins une marche complète pour pouvoir exporter et passer à l'étape 2
           </p>
         )}
       </div>
