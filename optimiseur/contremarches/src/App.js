@@ -44,7 +44,11 @@ const RiserOptimizationApp = () => {
           const data = JSON.parse(e.target.result);
           console.log('Fichier importé:', data);
           
-          if (data.type === 'stair-measurement' && data.stairs && data.stairs.steps) {
+          // Check if it's a valid stair measurement file
+          const isValidType = (data.type === 'stair-measurement' || data.metadata?.type === 'stair-measurement');
+          const hasStairs = data.stairs && data.stairs.steps && Array.isArray(data.stairs.steps);
+          
+          if (isValidType && hasStairs) {
             console.log('Contremarches trouvées:', data.stairs.steps.length);
             setProjectData(data);
             setShowUploadModal(false);
