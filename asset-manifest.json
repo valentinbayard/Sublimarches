@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/Sublimarches/optimiseur/static/css/main.296ef13a.css",
+    "main.js": "/Sublimarches/optimiseur/static/js/main.f0763793.js",
+    "index.html": "/Sublimarches/optimiseur/index.html",
+    "main.296ef13a.css.map": "/Sublimarches/optimiseur/static/css/main.296ef13a.css.map",
+    "main.f0763793.js.map": "/Sublimarches/optimiseur/static/js/main.f0763793.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.296ef13a.css",
+    "static/js/main.f0763793.js"
+  ]
+}
