@@ -1,655 +1,446 @@
 import React, { useState } from 'react';
-import { Calculator, Plus, Trash2, X, Upload, Scissors, Package, Euro } from 'lucide-react';
+import { Calculator, Download, Plus, Trash2, X, Copy } from 'lucide-react';
 
-const RiserOptimizationApp = () => {
-  const [projectData, setProjectData] = useState(null);
-
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [optimizationResults, setOptimizationResults] = useState(null);
-  const [isCalculating, setIsCalculating] = useState(false);
+const StairMeasurementApp = () => {
+  const [projectName, setProjectName] = useState('');
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   
-  // Large planks configuration
-  const [largePlanks, setLargePlanks] = useState([
-    { id: 1, width: 900, height: 400, price: 7.92, maxQuantity: null, name: '90x40cm' },
-    { id: 2, width: 1360, height: 400, price: 11.74, maxQuantity: null, name: '136x40cm' },
-    { id: 3, width: 1810, height: 400, price: 17.73, maxQuantity: null, name: '181x40cm' }
+  // Marches de l'escalier - initialisation vide
+  const [steps, setSteps] = useState([
+    { id: 1, maxWidth: '', maxDepth: '', riserWidth: '', height: '', comment: '' }
   ]);
 
-  // Saw thickness
-  const [sawThickness, setSawThickness] = useState(10);
-
-  // Extract risers from project data
-  const risers = projectData?.stairs?.steps?.map(step => ({
-    id: step.stepNumber,
-    width: step.riserWidth,
-    height: step.height,
-    name: `Contremarche ${step.stepNumber}`,
-    comment: step.comment
-  })) || [];
-
-  // Handle file upload
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = JSON.parse(e.target.result);
-          if (data.type === 'stair-measurement') {
-            setProjectData(data);
-            setShowUploadModal(false);
-          } else {
-            alert('Fichier invalide. Veuillez utiliser un fichier exporté depuis l\'étape 1.');
-          }
-        } catch (error) {
-          alert('Erreur lors de la lecture du fichier JSON.');
-        }
-      };
-      reader.readAsText(file);
-    }
-  };
-
-
-
-  // Add new plank
-  const addNewPlank = () => {
-    const newId = Math.max(...largePlanks.map(p => p.id), 0) + 1;
-    setLargePlanks(prev => [...prev, {
-      id: newId,
-      width: 1000,
-      height: 400,
-      price: 10.00,
-      maxQuantity: null,
-      name: '100x40cm'
-    }]);
-  };
-
-  // Delete plank
-  const deletePlank = (id) => {
-    setLargePlanks(prev => prev.filter(p => p.id !== id));
-  };
-
-  // Generate plank name
-  const generatePlankName = (width, height) => {
-    return `${Math.round(width/10)}x${Math.round(height/10)}cm`;
-  };
-
-  // Optimization algorithm
-  const optimizeCutting = () => {
-    if (risers.length === 0) {
-      alert('Aucune contremarche à optimiser !');
-      return;
-    }
-
-    setIsCalculating(true);
-
-    // Simulate calculation time
-    setTimeout(() => {
-      const solution = calculateOptimalCutting(risers, sawThickness);
-      setOptimizationResults(solution);
-      setIsCalculating(false);
-    }, 1500);
-  };
-
-  // Calculate optimal cutting arrangement
-  const calculateOptimalCutting = (pieces, sawThickness) => {
-    const solution = [];
-    let remainingPieces = pieces.map((piece, index) => ({
-      ...piece,
-      instanceId: `piece-${piece.id}`,
-      name: `${piece.id}`,
-      originalIndex: index
-    }));
-    
-    const plankUsage = {};
-    largePlanks.forEach(plank => {
-      plankUsage[plank.id] = 0;
+  // Fonctions pour gérer les marches
+  const updateStep = (id, field, value) => {
+    setSteps(prev => {
+      const updatedSteps = prev.map(s => 
+        s.id === id ? { ...s, [field]: value } : s
+      );
+      
+      // Si on vient de remplir une marche qui était vide, créer une nouvelle ligne vide
+      const updatedStep = updatedSteps.find(s => s.id === id);
+      const isLastStep = id === Math.max(...updatedSteps.map(s => s.id));
+      
+      if (isLastStep && updatedStep.maxWidth && updatedStep.maxDepth && 
+          updatedStep.riserWidth && updatedStep.height) {
+        const newId = Math.max(...updatedSteps.map(s => s.id)) + 1;
+        updatedSteps.push({ id: newId, maxWidth: '', maxDepth: '', riserWidth: '', height: '', comment: '' });
+      }
+      
+      return updatedSteps;
     });
+  };
 
-    let totalCost = 0;
-    let totalPlanks = 0;
+  const deleteStep = (id) => {
+    setSteps(prev => prev.filter(s => s.id !== id));
+  };
 
-    while (remainingPieces.length > 0) {
-      let bestOption = null;
-      let bestEfficiency = 0;
+  // Fonction pour copier la marche précédente
+  const copyPreviousStep = (currentId) => {
+    const currentIndex = steps.findIndex(s => s.id === currentId);
+    if (currentIndex > 0) {
+      const previousStep = steps[currentIndex - 1];
+      updateStep(currentId, 'maxWidth', previousStep.maxWidth);
+      updateStep(currentId, 'maxDepth', previousStep.maxDepth);
+      updateStep(currentId, 'riserWidth', previousStep.riserWidth);
+      updateStep(currentId, 'height', previousStep.height);
+      updateStep(currentId, 'comment', previousStep.comment);
+    }
+  };
+
+  // Fonction pour obtenir le numéro d'affichage d'une marche
+  const getStepDisplayNumber = (stepId) => {
+    const validSteps = steps.filter(s => s.maxWidth && s.maxDepth && s.riserWidth && s.height);
+    const stepIndex = validSteps.findIndex(s => s.id === stepId);
+    return stepIndex >= 0 ? stepIndex + 1 : 'Nouvelle';
+  };
+
+  // Fonction pour supprimer toutes les marches
+  const deleteAllSteps = () => {
+    setSteps([{ id: 1, maxWidth: '', maxDepth: '', riserWidth: '', height: '', comment: '' }]);
+    setShowDeleteAllModal(false);
+  };
+
+  // Fonction pour gérer la navigation au clavier
+  const handleFieldKeyDown = (e, currentId, currentField) => {
+    if (e.key === 'Tab' && !e.shiftKey) {
+      e.preventDefault();
       
-      // Test each plank type
-      for (const plankType of largePlanks) {
-        if (plankType.maxQuantity && plankUsage[plankType.id] >= plankType.maxQuantity) {
-          continue;
-        }
-        
-        const arrangement = calculateBestArrangement(remainingPieces, plankType, sawThickness);
-        const costPerArea = plankType.price / (plankType.width * plankType.height);
-        const efficiency = arrangement.efficiency / costPerArea;
-        
-        if (efficiency > bestEfficiency && arrangement.pieces.length > 0) {
-          bestEfficiency = efficiency;
-          bestOption = {
-            plankType,
-            arrangement,
-            costPerArea
-          };
-        }
-      }
+      const fieldOrder = ['maxWidth', 'maxDepth', 'riserWidth', 'height', 'comment'];
+      const currentFieldIndex = fieldOrder.indexOf(currentField);
       
-      if (bestOption) {
-        solution.push(bestOption);
-        plankUsage[bestOption.plankType.id]++;
-        totalCost += bestOption.plankType.price;
-        totalPlanks++;
-        
-        // Remove used pieces
-        remainingPieces = remainingPieces.filter(piece => 
-          !bestOption.arrangement.pieces.some(used => used.instanceId === piece.instanceId)
-        );
+      if (currentFieldIndex < fieldOrder.length - 1) {
+        // Passer au champ suivant de la même marche
+        const nextField = fieldOrder[currentFieldIndex + 1];
+        const nextInput = document.getElementById(`${nextField}-${currentId}`);
+        if (nextInput) {
+          nextInput.focus();
+        }
       } else {
-        // If no piece can be placed, try with available planks
-        const piece = remainingPieces[0];
-        const availablePlanks = largePlanks.filter(plank => 
-          !plank.maxQuantity || plankUsage[plank.id] < plank.maxQuantity
-        );
-        
-        const suitablePlank = availablePlanks.find(plank => {
-          const fitNormal = piece.width <= plank.width && piece.height <= plank.height;
-          const fitRotated = piece.height <= plank.width && piece.width <= plank.height;
-          return fitNormal || fitRotated;
-        });
-        
-        if (suitablePlank) {
-          const rotated = !(piece.width <= suitablePlank.width && piece.height <= suitablePlank.height);
-          solution.push({
-            plankType: suitablePlank,
-            arrangement: { 
-              pieces: [{
-                ...piece,
-                rotated,
-                x: 0,
-                y: 0,
-                displayWidth: rotated ? piece.height : piece.width,
-                displayHeight: rotated ? piece.width : piece.height
-              }],
-              efficiency: (piece.width * piece.height) / (suitablePlank.width * suitablePlank.height)
-            }
-          });
-          plankUsage[suitablePlank.id]++;
-          totalCost += suitablePlank.price;
-          totalPlanks++;
-          remainingPieces.shift();
-        } else {
-          break;
+        // Passer à la première marche de la marche suivante
+        const nextId = currentId + 1;
+        const nextInput = document.getElementById(`maxWidth-${nextId}`);
+        if (nextInput) {
+          nextInput.focus();
         }
       }
     }
+  };
 
+  // Générer les données pour export JSON
+  const generateProjectData = () => {
+    const validSteps = steps.filter(s => s.maxWidth && s.maxDepth && s.riserWidth && s.height);
+    
     return {
-      solution,
-      totalCost,
-      totalPlanks,
-      remainingPieces,
-      efficiency: solution.reduce((sum, item) => sum + item.arrangement.efficiency, 0) / solution.length
+      metadata: {
+        version: "1.0",
+        created: new Date().toISOString(),
+        appVersion: "stair-measurement-v1.0",
+        type: "stair-measurement"
+      },
+      project: {
+        name: projectName || "Escalier sans nom",
+        description: "Mesures d'escalier pour optimisation de découpe"
+      },
+      stairs: {
+        totalSteps: validSteps.length,
+        steps: validSteps.map((step, index) => ({
+          stepNumber: index + 1,
+          maxWidth: parseInt(step.maxWidth),
+          maxDepth: parseInt(step.maxDepth),
+          riserWidth: parseInt(step.riserWidth),
+          height: parseInt(step.height),
+          comment: step.comment || '',
+          // Calculs automatiques pour référence
+          calculated: {
+            riserSurface: parseInt(step.riserWidth) * parseInt(step.height),
+            treadSurface: parseInt(step.maxWidth) * parseInt(step.maxDepth)
+          }
+        }))
+      },
+      validation: {
+        errors: [],
+        warnings: generateWarnings(validSteps),
+        isValid: validSteps.length > 0
+      }
     };
   };
 
-  // Calculate best arrangement for a plank
-  const calculateBestArrangement = (pieces, plankType, sawThickness) => {
-    const arrangements = [];
+  // Générer des avertissements
+  const generateWarnings = (validSteps) => {
+    const warnings = [];
     
-    // Try different piece combinations
-    for (let i = 1; i <= Math.min(pieces.length, 10); i++) {
-      const combinations = getCombinations(pieces, i);
-      
-      for (const combination of combinations) {
-        const arrangement = placePieces(combination, plankType, sawThickness);
-        if (arrangement.pieces.length > 0) {
-          const totalArea = arrangement.pieces.reduce((sum, piece) => 
-            sum + (piece.width * piece.height), 0
-          );
-          arrangement.totalValue = totalArea;
-          arrangement.efficiency = totalArea / (plankType.width * plankType.height);
-          arrangements.push(arrangement);
-        }
-      }
+    if (validSteps.length === 0) {
+      warnings.push("Aucune marche mesurée");
+      return warnings;
     }
-    
-    return arrangements.reduce((best, current) => 
-      current.totalValue > best.totalValue ? current : best
-    , { pieces: [], totalValue: 0, efficiency: 0 });
-  };
 
-  // Get combinations of pieces
-  const getCombinations = (pieces, size) => {
-    if (size === 1) return pieces.map(p => [p]);
-    if (size === pieces.length) return [pieces];
+    // Vérifier la cohérence des hauteurs
+    const heights = validSteps.map(s => parseInt(s.height));
+    const avgHeight = heights.reduce((a, b) => a + b, 0) / heights.length;
+    const maxDeviation = Math.max(...heights.map(h => Math.abs(h - avgHeight)));
     
-    const combinations = [];
-    for (let i = 0; i <= pieces.length - size; i++) {
-      const head = pieces[i];
-      const tailCombinations = getCombinations(pieces.slice(i + 1), size - 1);
-      for (const tail of tailCombinations) {
-        combinations.push([head, ...tail]);
-      }
+    if (maxDeviation > 10) {
+      warnings.push(`Hauteurs de marches variables (écart max: ${maxDeviation}mm)`);
     }
-    return combinations;
-  };
 
-  // Place pieces on a plank
-  const placePieces = (pieces, plankType, sawThickness) => {
-    const placedPieces = [];
-    
-    for (const piece of pieces) {
-      const position = findBestPosition(piece, placedPieces, plankType, sawThickness);
-      if (position) {
-        const rotated = position.rotated;
-        placedPieces.push({
-          ...piece,
-          x: position.x,
-          y: position.y,
-          rotated,
-          displayWidth: rotated ? piece.height : piece.width,
-          displayHeight: rotated ? piece.width : piece.height
-        });
+    // Vérifier les dimensions minimales
+    validSteps.forEach((step, index) => {
+      if (parseInt(step.maxWidth) < 600) {
+        warnings.push(`Marche ${index + 1}: largeur faible (${step.maxWidth}mm)`);
       }
-    }
-    
-    return { pieces: placedPieces };
-  };
-
-  // Find best position for a piece
-  const findBestPosition = (piece, placedPieces, plankType, sawThickness) => {
-    const positions = [];
-    
-    // Try normal orientation
-    if (piece.width <= plankType.width && piece.height <= plankType.height) {
-      positions.push({ x: 0, y: 0, rotated: false });
-    }
-    
-    // Try rotated orientation
-    if (piece.height <= plankType.width && piece.width <= plankType.height) {
-      positions.push({ x: 0, y: 0, rotated: true });
-    }
-    
-    // Add positions near existing pieces
-    for (const existing of placedPieces) {
-      const rightPos = { x: existing.x + existing.displayWidth + sawThickness, y: existing.y, rotated: false };
-      const bottomPos = { x: existing.x, y: existing.y + existing.displayHeight + sawThickness, rotated: false };
-      positions.push(rightPos, bottomPos);
-    }
-    
-    // Sort positions by x then y
-    positions.sort((a, b) => a.x - b.x || a.y - b.y);
-    
-    // Test each position
-    for (const pos of positions) {
-      if (canPlaceAt(piece, pos, placedPieces, plankType, sawThickness)) {
-        return pos;
+      if (parseInt(step.maxDepth) < 200) {
+        warnings.push(`Marche ${index + 1}: profondeur faible (${step.maxDepth}mm)`);
       }
-    }
-    
-    return null;
-  };
-
-  // Check if piece can be placed at position
-  const canPlaceAt = (piece, position, placedPieces, plankType, sawThickness) => {
-    const width = position.rotated ? piece.height : piece.width;
-    const height = position.rotated ? piece.width : piece.height;
-    
-    // Check plank boundaries
-    if (position.x + width > plankType.width || position.y + height > plankType.height) {
-      return false;
-    }
-    
-    // Check collisions with existing pieces
-    for (const existing of placedPieces) {
-      if (!(position.x >= existing.x + existing.displayWidth + sawThickness ||
-            position.x + width + sawThickness <= existing.x ||
-            position.y >= existing.y + existing.displayHeight + sawThickness ||
-            position.y + height + sawThickness <= existing.y)) {
-        return false;
-      }
-    }
-    
-    return true;
-  };
-
-  // Generate plank summary
-  const generatePlankSummary = (solution) => {
-    const summary = {};
-    solution.solution.forEach(item => {
-      const plankName = generatePlankName(item.plankType.width, item.plankType.height);
-      if (!summary[plankName]) {
-        summary[plankName] = { 
-          count: 0, 
-          price: item.plankType.price, 
-          dimensions: `${item.plankType.width}×${item.plankType.height}mm` 
-        };
-      }
-      summary[plankName].count++;
     });
 
-    return Object.entries(summary).map(([name, data]) => (
-      <div key={name} className="flex justify-between items-center p-2 bg-white rounded border">
-        <div>
-          <span className="font-medium">{name}</span>
-          <span className="text-sm text-gray-600 ml-2">({data.dimensions})</span>
-        </div>
-        <div className="text-right">
-          <div className="font-semibold text-blue-600">
-            {data.count} planche{data.count > 1 ? 's' : ''}
-          </div>
-          <div className="text-sm text-gray-600">
-            {data.count} × {data.price}€ = {(data.count * data.price).toFixed(2)}€
-          </div>
-        </div>
-      </div>
-    ));
+    return warnings;
   };
 
-  // Generate plank visualization
-  const generatePlankVisualization = (item, index) => {
-    const plankType = item.plankType;
-    const arrangement = item.arrangement;
-    
-    // Calculate scale to maintain real proportions
-    const maxDisplayWidth = 400;
-    const maxDisplayHeight = 200;
-    const scaleX = maxDisplayWidth / plankType.width;
-    const scaleY = maxDisplayHeight / plankType.height;
-    const scale = Math.min(scaleX, scaleY);
-    
-    const displayWidth = plankType.width * scale;
-    const displayHeight = plankType.height * scale;
-    
-    const colors = ['bg-blue-300', 'bg-green-300', 'bg-red-300', 'bg-purple-300', 'bg-yellow-300', 'bg-pink-300', 'bg-indigo-300', 'bg-orange-300'];
-    
-    return (
-      <div key={index} className="border border-gray-300 p-4 bg-amber-50">
-        <h4 className="font-semibold mb-2">{generatePlankName(plankType.width, plankType.height)} - {plankType.price}€</h4>
-        <div className="flex justify-center">
-          <div 
-            className="relative border-2 border-amber-800 bg-amber-100" 
-            style={{ width: displayWidth, height: displayHeight }}
-          >
-            {arrangement.pieces.map((piece, pieceIndex) => {
-              const color = colors[piece.originalIndex % colors.length];
-              return (
-                <div 
-                  key={pieceIndex}
-                  className={`absolute border border-gray-700 ${color} flex items-center justify-center text-xs font-bold shadow-sm`}
-                  style={{
-                    width: piece.displayWidth * scale,
-                    height: piece.displayHeight * scale,
-                    left: piece.x * scale,
-                    top: piece.y * scale
-                  }}
-                >
-                  <div className="text-center leading-tight">
-                    <div className="font-bold">{piece.name}</div>
-                    <div className="text-xs">{piece.width}×{piece.height}</div>
-                    {piece.rotated && <div className="text-xs">↻</div>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-        <div className="mt-2 text-sm text-gray-600 text-center">
-          Pièces: {arrangement.pieces.length} | 
-          Efficacité: {(arrangement.efficiency * 100).toFixed(1)}%
-        </div>
-        <div className="mt-1 text-xs text-gray-500 text-center">
-          Dimensions: {plankType.width}×{plankType.height}mm | Échelle: 1:{Math.round(1/scale)}
-        </div>
-      </div>
-    );
+  // Exporter les données
+  const exportData = () => {
+    const data = generateProjectData();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${projectName || 'escalier'}-mesures.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
+
+  // Statistiques du projet
+  const validSteps = steps.filter(s => s.maxWidth && s.maxDepth && s.riserWidth && s.height);
+  const totalRiserSurface = validSteps.reduce((sum, step) => 
+    sum + (parseInt(step.riserWidth) * parseInt(step.height)), 0
+  );
+  const totalTreadSurface = validSteps.reduce((sum, step) => 
+    sum + (parseInt(step.maxWidth) * parseInt(step.maxDepth)), 0
+  );
 
   return (
-    <div className="max-w-6xl mx-auto p-6 bg-white min-h-screen">
+    <div className="max-w-4xl mx-auto p-6 bg-white min-h-screen">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-800 mb-2 flex items-center gap-2">
-          <Scissors className="text-blue-600" />
-          Optimisation des Contremarches
+          <Calculator className="text-blue-600" />
+          Mesures d'Escalier
         </h1>
         <p className="text-gray-600">
-          Étape 2/3 : Optimisez la découpe des contremarches sur les grandes planches
+          Étape 1/3 : Saisissez les dimensions de chaque marche de votre escalier
         </p>
       </div>
 
-      {/* File Upload Section */}
-      {!projectData && (
-        <div className="bg-blue-50 p-6 rounded-lg mb-6 text-center">
-          <h3 className="font-semibold text-blue-800 mb-4 flex items-center gap-2">
-            <Upload className="w-5 h-5" />
-            Importer les mesures de l'étape 1
+      {/* Configuration du projet */}
+      <div className="bg-blue-50 p-4 rounded-lg mb-6">
+        <h3 className="font-semibold text-blue-800 mb-3">Informations du projet</h3>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Nom du projet
+          </label>
+          <input
+            type="text"
+            value={projectName}
+            onChange={(e) => setProjectName(e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded-md"
+            placeholder="Ex: Escalier principal maison Dupont"
+          />
+        </div>
+      </div>
+
+      {/* Marches de l'escalier */}
+      <div className="bg-green-50 p-4 rounded-lg mb-6">
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="font-semibold text-green-800 flex items-center gap-2">
+            <Calculator className="w-5 h-5" />
+            Mesures des marches
           </h3>
-          <p className="text-gray-600 mb-4">
-            Uploadez le fichier JSON exporté depuis l'étape 1 pour commencer l'optimisation
-          </p>
           <button
-            onClick={() => setShowUploadModal(true)}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 mx-auto"
+            onClick={() => setShowDeleteAllModal(true)}
+            className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 flex items-center gap-1"
+            disabled={validSteps.length === 0}
           >
-            <Upload className="w-5 h-5" />
-            Choisir un fichier JSON
+            <Trash2 className="w-4 h-4" />
+            Tout supprimer
           </button>
         </div>
-      )}
-
-      {/* Project Info */}
-      {projectData && (
-        <div className="bg-green-50 p-4 rounded-lg mb-6">
-          <h3 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
-            <Package className="w-5 h-5" />
-            Projet : {projectData.project.name}
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-            <div>
-              <div className="text-2xl font-bold text-green-600">{risers.length}</div>
-              <div className="text-sm text-gray-600">Contremarches</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-blue-600">
-                {(risers.reduce((sum, r) => sum + (r.width * r.height), 0) / 1000000).toFixed(2)}
-              </div>
-              <div className="text-sm text-gray-600">m² total</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-purple-600">
-                {Math.max(...risers.map(r => r.width))}
-              </div>
-              <div className="text-sm text-gray-600">Largeur max (mm)</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-orange-600">
-                {Math.max(...risers.map(r => r.height))}
-              </div>
-              <div className="text-sm text-gray-600">Hauteur max (mm)</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Configuration */}
-      {projectData && (
-        <div className="grid md:grid-cols-2 gap-6 mb-6">
-          {/* General Parameters */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-semibold text-gray-800 mb-3">Paramètres généraux</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Largeur de scie (mm)
-                </label>
-                <input
-                  type="number"
-                  value={sawThickness}
-                  onChange={(e) => setSawThickness(parseInt(e.target.value) || 10)}
-                  min="0"
-                  max="50"
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Large Planks */}
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="font-semibold text-blue-800 flex items-center gap-2">
-                <Package className="w-5 h-5" />
-                Grandes planches disponibles
-              </h3>
-              <button
-                onClick={addNewPlank}
-                className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 flex items-center gap-1"
-              >
-                <Plus className="w-4 h-4" />
-                Ajouter
-              </button>
-            </div>
+        
+        <div className="grid gap-3">
+          {steps.map((step, index) => {
+            const isLastStep = index === steps.length - 1;
+            const isEmpty = !step.maxWidth && !step.maxDepth && !step.riserWidth && !step.height;
+            const displayNumber = getStepDisplayNumber(step.id);
+            const previousStep = index > 0 ? steps[index - 1] : null;
+            const canCopyPrevious = isLastStep && isEmpty && previousStep && 
+              previousStep.maxWidth && previousStep.maxDepth && previousStep.riserWidth && previousStep.height;
             
-            <div className="space-y-2">
-              {largePlanks.map((plank) => (
-                <div key={plank.id} className="flex items-center justify-between p-2 bg-white rounded border">
-                  <div className="flex-1">
-                    <div className="font-medium">{generatePlankName(plank.width, plank.height)}</div>
-                    <div className="text-sm text-gray-600">
-                      {plank.width}×{plank.height}mm - {plank.price}€
-                      {plank.maxQuantity ? ` (max: ${plank.maxQuantity})` : ''}
-                    </div>
+            return (
+              <div key={step.id} className="p-3 bg-white rounded border">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="font-medium text-green-800 w-16 text-sm">
+                    Marche {displayNumber}
                   </div>
-                  <div className="flex gap-1">
+                  
+                  {canCopyPrevious && (
                     <button
-                      onClick={() => deletePlank(plank.id)}
-                      className="p-1 text-red-600 hover:bg-red-100 rounded"
+                      onClick={() => copyPreviousStep(step.id)}
+                      className="px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded hover:bg-blue-200 flex items-center gap-1"
+                      title="Copier les mesures de la marche précédente"
+                    >
+                      <Copy className="w-3 h-3" />
+                      Copier précédente
+                    </button>
+                  )}
+                  
+                  {!isLastStep && (
+                    <button
+                      onClick={() => deleteStep(step.id)}
+                      className="p-1 text-red-600 hover:bg-red-100 rounded ml-auto"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Largeur max (mm)
+                    </label>
+                    <input
+                      id={`maxWidth-${step.id}`}
+                      type="number"
+                      value={step.maxWidth}
+                      onChange={(e) => updateStep(step.id, 'maxWidth', e.target.value)}
+                      onKeyDown={(e) => handleFieldKeyDown(e, step.id, 'maxWidth')}
+                      className="w-full p-2 border border-gray-300 rounded text-sm"
+                      placeholder="ex: 1200"
+                      min="1"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Profondeur max (mm)
+                    </label>
+                    <input
+                      id={`maxDepth-${step.id}`}
+                      type="number"
+                      value={step.maxDepth}
+                      onChange={(e) => updateStep(step.id, 'maxDepth', e.target.value)}
+                      onKeyDown={(e) => handleFieldKeyDown(e, step.id, 'maxDepth')}
+                      className="w-full p-2 border border-gray-300 rounded text-sm"
+                      placeholder="ex: 300"
+                      min="1"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Largeur contremarche (mm)
+                    </label>
+                    <input
+                      id={`riserWidth-${step.id}`}
+                      type="number"
+                      value={step.riserWidth}
+                      onChange={(e) => updateStep(step.id, 'riserWidth', e.target.value)}
+                      onKeyDown={(e) => handleFieldKeyDown(e, step.id, 'riserWidth')}
+                      className="w-full p-2 border border-gray-300 rounded text-sm"
+                      placeholder="ex: 1150"
+                      min="1"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Hauteur (mm)
+                    </label>
+                    <input
+                      id={`height-${step.id}`}
+                      type="number"
+                      value={step.height}
+                      onChange={(e) => updateStep(step.id, 'height', e.target.value)}
+                      onKeyDown={(e) => handleFieldKeyDown(e, step.id, 'height')}
+                      className="w-full p-2 border border-gray-300 rounded text-sm"
+                      placeholder="ex: 180"
+                      min="1"
+                    />
                   </div>
                 </div>
-              ))}
+                
+                <div className="mt-3">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Commentaire (optionnel)
+                  </label>
+                  <input
+                    id={`comment-${step.id}`}
+                    type="text"
+                    value={step.comment}
+                    onChange={(e) => updateStep(step.id, 'comment', e.target.value)}
+                    onKeyDown={(e) => handleFieldKeyDown(e, step.id, 'comment')}
+                    className="w-full p-2 border border-gray-300 rounded text-sm"
+                    placeholder="ex: marche avec pilier, attention découpe spéciale..."
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        
+        <div className="mt-3 text-xs text-green-700">
+          💡 Utilisez Tab pour naviguer rapidement entre les champs. Cliquez "Copier précédente" pour réutiliser les mesures.
+        </div>
+      </div>
+
+      {/* Statistiques */}
+      {validSteps.length > 0 && (
+        <div className="bg-gray-50 p-4 rounded-lg mb-6">
+          <h3 className="font-semibold text-gray-800 mb-3">Résumé du projet</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <div>
+              <div className="text-2xl font-bold text-blue-600">{validSteps.length}</div>
+              <div className="text-sm text-gray-600">Marches</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-green-600">
+                {(totalRiserSurface / 1000000).toFixed(2)}
+              </div>
+              <div className="text-sm text-gray-600">m² contremarches</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-purple-600">
+                {(totalTreadSurface / 1000000).toFixed(2)}
+              </div>
+              <div className="text-sm text-gray-600">m² dessus marches</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-orange-600">
+                {((totalRiserSurface + totalTreadSurface) / 1000000).toFixed(2)}
+              </div>
+              <div className="text-sm text-gray-600">m² total</div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Calculate Button */}
-      {projectData && (
-        <div className="text-center mb-6">
-          <button
-            onClick={optimizeCutting}
-            disabled={isCalculating || risers.length === 0}
-            className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto text-lg font-semibold"
-          >
-            {isCalculating ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                Calcul en cours...
-              </>
-            ) : (
-              <>
-                <Calculator className="w-5 h-5" />
-                Calculer l'optimisation
-              </>
-            )}
-          </button>
+      {/* Validation et avertissements */}
+      {validSteps.length > 0 && (
+        <div className="mb-6">
+          {generateWarnings(validSteps).map((warning, index) => (
+            <div key={index} className="bg-yellow-50 border border-yellow-200 p-3 rounded mb-2">
+              <div className="text-yellow-800 text-sm">⚠️ {warning}</div>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Results */}
-      {optimizationResults && (
-        <div className="space-y-6">
-          <div className="bg-green-100 p-4 rounded-lg">
-            <h3 className="font-semibold text-green-800 mb-2 flex items-center gap-2">
-              <Euro className="w-5 h-5" />
-              Résultat de l'optimisation
-            </h3>
-            <div className="grid md:grid-cols-3 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
-                  {optimizationResults.totalCost.toFixed(2)}€
-                </div>
-                <div className="text-sm text-gray-600">Coût total</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">
-                  {optimizationResults.totalPlanks}
-                </div>
-                <div className="text-sm text-gray-600">Grandes planches</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">
-                  {risers.length - optimizationResults.remainingPieces.length}
-                </div>
-                <div className="text-sm text-gray-600">Contremarches placées</div>
-              </div>
-            </div>
-          </div>
+      {/* Bouton d'export */}
+      <div className="text-center">
+        <button
+          onClick={exportData}
+          disabled={validSteps.length === 0}
+          className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto text-lg font-semibold"
+        >
+          <Download className="w-5 h-5" />
+          Exporter les mesures
+          {validSteps.length > 0 && <span className="text-sm">({validSteps.length} marche{validSteps.length > 1 ? 's' : ''})</span>}
+        </button>
+        
+        {validSteps.length === 0 && (
+          <p className="text-sm text-gray-500 mt-2">
+            Ajoutez au moins une marche complète pour pouvoir exporter
+          </p>
+        )}
+      </div>
 
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <h3 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
-              <Package className="w-5 h-5" />
-              Récapitulatif des planches à commander
-            </h3>
-            <div className="space-y-2">
-              {generatePlankSummary(optimizationResults)}
-              <div className="border-t pt-2 mt-3">
-                <div className="flex justify-between items-center font-bold text-lg">
-                  <span>Total à commander :</span>
-                  <span className="text-blue-600">{optimizationResults.totalCost.toFixed(2)}€</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <h3 className="font-semibold text-gray-800 mb-4">Plan de découpe détaillé</h3>
-            <div className="space-y-4">
-              {optimizationResults.solution.map((item, index) => generatePlankVisualization(item, index))}
-            </div>
-          </div>
-
-          {optimizationResults.remainingPieces.length > 0 && (
-            <div className="bg-red-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-red-800 mb-2">
-                Contremarches non placées ({optimizationResults.remainingPieces.length})
-              </h3>
-              <div className="text-sm text-red-600">
-                {optimizationResults.remainingPieces.map(p => p.name).join(', ')}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Upload Modal */}
-      {showUploadModal && (
+      {/* Modal de suppression */}
+      {showDeleteAllModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4 text-blue-800">
-              Importer les mesures
+            <h3 className="text-lg font-semibold mb-4 text-red-800">
+              Supprimer toutes les marches
             </h3>
             
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Fichier JSON de l'étape 1
-              </label>
-              <input
-                type="file"
-                accept=".json"
-                onChange={handleFileUpload}
-                className="w-full p-2 border border-gray-300 rounded-md"
-              />
-            </div>
+            <p className="text-gray-700 mb-6">
+              Êtes-vous sûr de vouloir supprimer toutes les mesures ? 
+              Cette action est irréversible.
+            </p>
             
             <div className="flex justify-end gap-2">
               <button
-                onClick={() => setShowUploadModal(false)}
+                onClick={() => setShowDeleteAllModal(false)}
                 className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-md flex items-center gap-2"
               >
                 <X className="w-4 h-4" />
                 Annuler
+              </button>
+              <button
+                onClick={deleteAllSteps}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Supprimer tout
               </button>
             </div>
           </div>
@@ -660,17 +451,17 @@ const RiserOptimizationApp = () => {
       <div className="mt-8 bg-blue-50 p-4 rounded-lg">
         <h4 className="font-semibold text-blue-800 mb-2">📋 Instructions</h4>
         <div className="text-sm text-blue-700 space-y-1">
-          <p><strong>1.</strong> Importez le fichier JSON exporté depuis l'étape 1</p>
-          <p><strong>2.</strong> Ajustez les paramètres de scie et les grandes planches disponibles</p>
-          <p><strong>3.</strong> Lancez l'optimisation pour obtenir le plan de découpe optimal</p>
-          <p><strong>4.</strong> Visualisez les résultats et le coût total</p>
+          <p><strong>Largeur max :</strong> Largeur maximale disponible pour la marche</p>
+          <p><strong>Profondeur max :</strong> Profondeur maximale disponible pour la marche</p>
+          <p><strong>Largeur contremarche :</strong> Largeur de la partie verticale</p>
+          <p><strong>Hauteur :</strong> Hauteur de la contremarche (entre 2 marches)</p>
         </div>
         <div className="mt-3 text-xs text-blue-600">
-          L'algorithme optimise pour le coût total en tenant compte de l'efficacité de découpe et des prix des planches.
+          Une fois les mesures saisies, exportez le fichier JSON pour passer à l'étape 2 : optimisation des contremarches.
         </div>
       </div>
     </div>
   );
 };
 
-export default RiserOptimizationApp;
+export default StairMeasurementApp;
