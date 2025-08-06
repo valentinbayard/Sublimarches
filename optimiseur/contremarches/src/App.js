@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calculator, Plus, Trash2, X, Upload, Scissors, Package, Euro, ArrowLeft } from 'lucide-react';
 
 const RiserOptimizationApp = () => {
@@ -25,6 +25,14 @@ const RiserOptimizationApp = () => {
     name: `Contremarche ${step.stepNumber}`,
     comment: step.comment
   })) || [];
+  
+  // Debug: log risers when projectData changes
+  useEffect(() => {
+    if (projectData) {
+      console.log('ProjectData mis à jour:', projectData);
+      console.log('Contremarches extraites:', risers);
+    }
+  }, [projectData, risers]);
 
   // Handle file upload
   const handleFileUpload = (event) => {
@@ -34,14 +42,19 @@ const RiserOptimizationApp = () => {
       reader.onload = (e) => {
         try {
           const data = JSON.parse(e.target.result);
-          if (data.type === 'stair-measurement') {
+          console.log('Fichier importé:', data);
+          
+          if (data.type === 'stair-measurement' && data.stairs && data.stairs.steps) {
+            console.log('Contremarches trouvées:', data.stairs.steps.length);
             setProjectData(data);
             setShowUploadModal(false);
           } else {
-            alert('Fichier invalide. Veuillez utiliser un fichier exporté depuis l\'étape 1.');
+            console.error('Structure de fichier invalide:', data);
+            alert('Fichier invalide. Veuillez utiliser un fichier exporté depuis l\'étape 1.\n\nStructure attendue: fichier JSON avec type="stair-measurement" et données des marches.');
           }
         } catch (error) {
-          alert('Erreur lors de la lecture du fichier JSON.');
+          console.error('Erreur de parsing JSON:', error);
+          alert('Erreur lors de la lecture du fichier JSON: ' + error.message);
         }
       };
       reader.readAsText(file);
