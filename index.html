@@ -1,1 +1,126 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"/><link rel="icon" href="/Sublimarches/optimiseur/favicon.ico"/><meta name="viewport" content="width=device-width,initial-scale=1"/><meta name="theme-color" content="#000000"/><meta name="description" content="Web site created using create-react-app"/><link rel="apple-touch-icon" href="/Sublimarches/optimiseur/logo192.png"/><link rel="manifest" href="/Sublimarches/optimiseur/manifest.json"/><title>React App</title><script defer="defer" src="/Sublimarches/optimiseur/static/js/main.d9871b64.js"></script><link href="/Sublimarches/optimiseur/static/css/main.a231b4c6.css" rel="stylesheet"></head><body><noscript>You need to enable JavaScript to run this app.</noscript><div id="root"></div></body></html>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sublimarches - Outils d'optimisation d'escalier</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 600px;
+            margin: 2rem;
+        }
+        h1 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        p {
+            color: #718096;
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+        .apps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+        .app-card {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 2rem;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+        }
+        .app-card:hover {
+            border-color: #4299e1;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(66, 153, 225, 0.15);
+        }
+        .app-card h3 {
+            color: #2d3748;
+            margin-bottom: 0.5rem;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+        .app-card p {
+            color: #718096;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+        .step-number {
+            background: #4299e1;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        .btn {
+            background: #4299e1;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-block;
+            transition: background 0.3s ease;
+        }
+        .btn:hover {
+            background: #3182ce;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏗️ Sublimarches</h1>
+        <p>Outils d'optimisation pour la construction d'escaliers</p>
+        
+        <div class="apps-grid">
+            <a href="/Sublimarches/optimiseur/mesures/" class="app-card">
+                <div class="step-number">1</div>
+                <h3>Mesures d'escalier</h3>
+                <p>Saisissez les dimensions de chaque marche et contremarche de votre escalier</p>
+                <span class="btn">Commencer</span>
+            </a>
+            
+            <a href="/Sublimarches/optimiseur/contremarches/" class="app-card">
+                <div class="step-number">2</div>
+                <h3>Optimisation des contremarches</h3>
+                <p>Optimisez la découpe des contremarches sur les grandes planches pour minimiser les coûts</p>
+                <span class="btn">Optimiser</span>
+            </a>
+        </div>
+        
+        <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0;">
+            <p style="font-size: 0.9rem; color: #a0aec0;">
+                Développé pour les professionnels du bâtiment
+            </p>
+        </div>
+    </div>
+</body>
+</html>
