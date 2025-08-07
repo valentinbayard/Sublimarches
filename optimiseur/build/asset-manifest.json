@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/Sublimarches/optimiseur/static/css/main.a231b4c6.css",
-    "main.js": "/Sublimarches/optimiseur/static/js/main.d9871b64.js",
+    "main.js": "/Sublimarches/optimiseur/static/js/main.35c38e85.js",
     "index.html": "/Sublimarches/optimiseur/index.html",
     "main.a231b4c6.css.map": "/Sublimarches/optimiseur/static/css/main.a231b4c6.css.map",
-    "main.d9871b64.js.map": "/Sublimarches/optimiseur/static/js/main.d9871b64.js.map"
+    "main.35c38e85.js.map": "/Sublimarches/optimiseur/static/js/main.35c38e85.js.map"
   },
   "entrypoints": [
     "static/css/main.a231b4c6.css",
-    "static/js/main.d9871b64.js"
+    "static/js/main.35c38e85.js"
   ]
 }

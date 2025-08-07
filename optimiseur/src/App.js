@@ -410,7 +410,7 @@ const StairMeasurementApp = () => {
           
           {validSteps.length > 0 && (
             <a
-              href="/Sublimarches/optimiseur/step2/"
+              href="/Sublimarches/optimiseur/contremarches/"
               className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 text-lg font-semibold"
             >
               <ArrowRight className="w-5 h-5" />
