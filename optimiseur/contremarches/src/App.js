@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator, Plus, Trash2, X, Upload, Scissors, Package, Euro, ArrowLeft } from 'lucide-react';
+import { Calculator, Plus, Trash2, X, Upload, Scissors, Package, Euro, ArrowLeft, ArrowRight, Copy } from 'lucide-react';
 
 const RiserOptimizationApp = () => {
   const [projectData, setProjectData] = useState(null);
@@ -72,7 +72,7 @@ const RiserOptimizationApp = () => {
       id: newId,
       width: 1000,
       height: 400,
-      price: 10.00,
+      price: 0.00,
       maxQuantity: null,
       name: '100x40cm'
     }]);
@@ -81,6 +81,13 @@ const RiserOptimizationApp = () => {
   // Delete plank
   const deletePlank = (id) => {
     setLargePlanks(prev => prev.filter(p => p.id !== id));
+  };
+
+  // Update plank
+  const updatePlank = (id, field, value) => {
+    setLargePlanks(prev => prev.map(plank => 
+      plank.id === id ? { ...plank, [field]: value } : plank
+    ));
   };
 
   // Generate plank name
@@ -359,6 +366,61 @@ const RiserOptimizationApp = () => {
     ));
   };
 
+  // Generate shopping list as text table
+  const generateShoppingListText = (solution) => {
+    const summary = {};
+    solution.solution.forEach(item => {
+      const plankName = generatePlankName(item.plankType.width, item.plankType.height);
+      if (!summary[plankName]) {
+        summary[plankName] = { 
+          count: 0, 
+          price: item.plankType.price, 
+          dimensions: `${item.plankType.width}×${item.plankType.height}mm` 
+        };
+      }
+      summary[plankName].count++;
+    });
+
+    let tableText = "Grande planche\tQuantité\tPU\tPrix total\n";
+    tableText += "-\t-\t-\t-\n";
+    
+    let totalCost = 0;
+    Object.entries(summary).forEach(([name, data]) => {
+      const lineTotal = data.count * data.price;
+      totalCost += lineTotal;
+      tableText += `${name}\t${data.count}\t${data.price}€\t${lineTotal.toFixed(2)}€\n`;
+    });
+    
+    tableText += "-\t-\t-\t-\n";
+    tableText += `Total\t\t\t${totalCost.toFixed(2)}€\n`;
+    
+    return tableText;
+  };
+
+  // Copy shopping list to clipboard
+  const copyShoppingListToClipboard = () => {
+    if (!optimizationResults) return;
+    
+    const tableText = generateShoppingListText(optimizationResults);
+    
+    navigator.clipboard.writeText(tableText).then(() => {
+      // Show a temporary success message
+      const button = document.getElementById('copy-shopping-list-btn');
+      if (button) {
+        const originalText = button.innerHTML;
+        button.innerHTML = '<Copy className="w-4 h-4" /> Copié !';
+        button.className = 'px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 flex items-center gap-1';
+        setTimeout(() => {
+          button.innerHTML = originalText;
+          button.className = 'px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 flex items-center gap-1';
+        }, 2000);
+      }
+    }).catch(err => {
+      console.error('Erreur lors de la copie:', err);
+      alert('Erreur lors de la copie vers le presse-papiers');
+    });
+  };
+
   // Generate plank visualization
   const generatePlankVisualization = (item, index) => {
     const plankType = item.plankType;
@@ -534,18 +596,60 @@ const RiserOptimizationApp = () => {
             
             <div className="space-y-2">
               {largePlanks.map((plank) => (
-                <div key={plank.id} className="flex items-center justify-between p-2 bg-white rounded border">
-                  <div className="flex-1">
-                    <div className="font-medium">{generatePlankName(plank.width, plank.height)}</div>
-                    <div className="text-sm text-gray-600">
-                      {plank.width}×{plank.height}mm - {plank.price}€
-                      {plank.maxQuantity ? ` (max: ${plank.maxQuantity})` : ''}
+                <div key={plank.id} className="p-3 bg-white rounded border">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Largeur (mm)</label>
+                      <input
+                        type="number"
+                        value={plank.width}
+                        onChange={(e) => updatePlank(plank.id, 'width', parseInt(e.target.value) || 0)}
+                        className="w-full p-1 text-sm border border-gray-300 rounded"
+                        min="1"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Hauteur (mm)</label>
+                      <input
+                        type="number"
+                        value={plank.height}
+                        onChange={(e) => updatePlank(plank.id, 'height', parseInt(e.target.value) || 0)}
+                        className="w-full p-1 text-sm border border-gray-300 rounded"
+                        min="1"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Prix (€)</label>
+                      <input
+                        type="number"
+                        value={plank.price}
+                        onChange={(e) => updatePlank(plank.id, 'price', parseFloat(e.target.value) || 0)}
+                        className="w-full p-1 text-sm border border-gray-300 rounded"
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Quantité max</label>
+                      <input
+                        type="number"
+                        value={plank.maxQuantity || ''}
+                        onChange={(e) => updatePlank(plank.id, 'maxQuantity', e.target.value ? parseInt(e.target.value) : null)}
+                        className="w-full p-1 text-sm border border-gray-300 rounded"
+                        min="1"
+                        placeholder="Illimité"
+                      />
                     </div>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-gray-600">
+                      {generatePlankName(plank.width, plank.height)} - {plank.price}€
+                      {plank.maxQuantity ? ` (max: ${plank.maxQuantity})` : ' (illimité)'}
+                    </div>
                     <button
                       onClick={() => deletePlank(plank.id)}
                       className="p-1 text-red-600 hover:bg-red-100 rounded"
+                      title="Supprimer cette planche"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -611,10 +715,21 @@ const RiserOptimizationApp = () => {
           </div>
 
           <div className="bg-blue-50 p-4 rounded-lg">
-            <h3 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
-              <Package className="w-5 h-5" />
-              Récapitulatif des planches à commander
-            </h3>
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-semibold text-blue-800 flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                Récapitulatif des planches à commander
+              </h3>
+              <button
+                id="copy-shopping-list-btn"
+                onClick={copyShoppingListToClipboard}
+                className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 flex items-center gap-1"
+                title="Copier la liste d'achat au format tableau"
+              >
+                <Copy className="w-4 h-4" />
+                Copier liste
+              </button>
+            </div>
             <div className="space-y-2">
               {generatePlankSummary(optimizationResults)}
               <div className="border-t pt-2 mt-3">
@@ -643,6 +758,24 @@ const RiserOptimizationApp = () => {
               </div>
             </div>
           )}
+
+          {/* Navigation to Step 3 */}
+          <div className="bg-green-50 p-4 rounded-lg text-center">
+            <h3 className="font-semibold text-green-800 mb-3 flex items-center gap-2 justify-center">
+              <Package className="w-5 h-5" />
+              Prêt pour l'étape 3 ?
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Optimisez maintenant les dessus de marche avec les mêmes données
+            </p>
+            <a
+              href="/Sublimarches/optimiseur/dessus-marches/"
+              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 mx-auto text-lg font-semibold w-fit"
+            >
+              <ArrowRight className="w-5 h-5" />
+              Passer à l'étape 3
+            </a>
+          </div>
         </div>
       )}
 
