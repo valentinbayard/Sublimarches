@@ -1,61 +1,62 @@
 #!/bin/bash
 
 # Deploy script for Sublimarches GitHub Pages
-# This script builds and deploys all apps in the correct structure
+# This script builds all apps and prepares them for deployment
 
 set -e
 
-echo "🚀 Starting deployment of Sublimarches..."
+echo "🚀 Starting build process for Sublimarches..."
 
-# Create a temporary directory for the deployment
-TEMP_DIR=$(mktemp -d)
-echo "📁 Created temporary directory: $TEMP_DIR"
+# Store the root directory
+ROOT_DIR=$(pwd)
 
-# Function to build and copy app
+# Function to build app
 build_app() {
     local app_name=$1
     local app_path=$2
-    local target_path=$3
     
     echo "🔨 Building $app_name..."
-    cd "$app_path"
+    cd "$ROOT_DIR/$app_path"
+    
+    # Install dependencies if node_modules doesn't exist
+    if [ ! -d "node_modules" ]; then
+        echo "📦 Installing dependencies for $app_name..."
+        npm ci
+    fi
+    
     npm run build
     
-    echo "📋 Copying $app_name to $target_path..."
-    mkdir -p "$TEMP_DIR/$target_path"
-    cp -r build/* "$TEMP_DIR/$target_path/"
-    
-    cd - > /dev/null
+    cd "$ROOT_DIR"
 }
 
 # Build all apps
-build_app "Mesures" "optimiseur/mesures" "optimiseur/mesures"
-build_app "Contremarches" "optimiseur/contremarches" "optimiseur/contremarches"
-build_app "Dessus-marches" "optimiseur/dessus-marches" "optimiseur/dessus-marches"
-build_app "Main Optimiseur" "optimiseur" "optimiseur"
+build_app "Mesures" "optimiseur/mesures"
+build_app "Contremarches" "optimiseur/contremarches"
+build_app "Dessus-marches" "optimiseur/dessus-marches"
+build_app "Main Optimiseur" "optimiseur"
 
-# Copy the landing page and .nojekyll file
-echo "📄 Copying landing page and .nojekyll file..."
-cp index.html "$TEMP_DIR/"
-cp .nojekyll "$TEMP_DIR/"
+# Prepare deployment directory
+echo "📁 Preparing deployment directory..."
+rm -rf deployment
+mkdir -p deployment
 
-# Deploy to gh-pages
-echo "🚀 Deploying to GitHub Pages..."
-cd "$TEMP_DIR"
-git init
-git add .
-git commit -m "🚀 Deploy Sublimarches - $(date)"
+# Copy landing page and .nojekyll
+echo "📄 Copying landing page and .nojekyll..."
+cp index.html deployment/
+cp .nojekyll deployment/
 
-# Force push to gh-pages branch
-git push --force https://github.com/valentinbayard/Sublimarches.git HEAD:gh-pages
+# Create directory structure and copy built apps
+echo "📋 Copying built applications..."
+mkdir -p deployment/optimiseur
 
-# Cleanup
-cd - > /dev/null
-rm -rf "$TEMP_DIR"
+# Copy main optimiseur app (to root of optimiseur/)
+cp -r optimiseur/build/* deployment/optimiseur/
 
-echo "✅ Deployment complete!"
-echo "🌐 Your apps are now available at:"
-echo "   - Main: https://valentinbayard.github.io/Sublimarches/"
-echo "   - Mesures: https://valentinbayard.github.io/Sublimarches/optimiseur/mesures/"
-echo "   - Contremarches: https://valentinbayard.github.io/Sublimarches/optimiseur/contremarches/"
-echo "   - Dessus-marches: https://valentinbayard.github.io/Sublimarches/optimiseur/dessus-marches/"
+# Copy sub-apps to their respective directories
+cp -r optimiseur/mesures/build deployment/optimiseur/mesures
+cp -r optimiseur/contremarches/build deployment/optimiseur/contremarches
+cp -r optimiseur/dessus-marches/build deployment/optimiseur/dessus-marches
+
+echo "✅ Build complete! Deployment directory is ready."
+echo "📁 Deployment structure:"
+find deployment -type d -maxdepth 3 | sort
