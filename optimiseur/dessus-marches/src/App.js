@@ -498,7 +498,7 @@ const TreadOptimizationApp = () => {
           Optimisation des Dessus de Marche
         </h1>
         <p className="text-gray-600">
-          Étape 3/3 : Optimisez la découpe des dessus de marche sur les grandes planches
+          Étape 3/3 : Optimisez la découpe des dessus de marche sur les grandes planches (v2)
         </p>
       </div>
 
