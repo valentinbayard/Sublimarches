@@ -34,9 +34,10 @@ build_app "Contremarches" "optimiseur/contremarches" "optimiseur/contremarches"
 build_app "Dessus-marches" "optimiseur/dessus-marches" "optimiseur/dessus-marches"
 build_app "Main Optimiseur" "optimiseur" "optimiseur"
 
-# Copy the landing page
-echo "📄 Copying landing page..."
+# Copy the landing page and .nojekyll file
+echo "📄 Copying landing page and .nojekyll file..."
 cp index.html "$TEMP_DIR/"
+cp .nojekyll "$TEMP_DIR/"
 
 # Deploy to gh-pages
 echo "🚀 Deploying to GitHub Pages..."
