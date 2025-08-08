@@ -5,19 +5,16 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
-  # Build job
   build:
     runs-on: ubuntu-latest
     steps:
@@ -29,50 +26,131 @@ jobs:
         with:
           node-version: '18'
       
+      - name: Check project structure
+        run: |
+          echo "=== Project structure ==="
+          ls -la
+          echo "=== Optimiseur directory ==="
+          ls -la optimiseur/
+          echo "=== Checking for package.json files ==="
+          find . -name "package.json" -type f
+          
       - name: Install and Build Mesures
         run: |
-          cd optimiseur/mesures
-          npm ci
-          npm run build
+          echo "=== Building Mesures ==="
+          if [ -d "optimiseur/mesures" ]; then
+            cd optimiseur/mesures
+            echo "Installing dependencies..."
+            npm ci
+            echo "Building..."
+            npm run build
+            echo "Build complete, checking output..."
+            ls -la build/
+          else
+            echo "ERROR: optimiseur/mesures directory not found!"
+            exit 1
+          fi
           
       - name: Install and Build Contremarches
         run: |
-          cd optimiseur/contremarches
-          npm ci
-          npm run build
+          echo "=== Building Contremarches ==="
+          if [ -d "optimiseur/contremarches" ]; then
+            cd optimiseur/contremarches
+            echo "Installing dependencies..."
+            npm ci
+            echo "Building..."
+            npm run build
+            echo "Build complete, checking output..."
+            ls -la build/
+          else
+            echo "ERROR: optimiseur/contremarches directory not found!"
+            exit 1
+          fi
           
       - name: Install and Build Dessus-marches
         run: |
-          cd optimiseur/dessus-marches
-          npm ci
-          npm run build
+          echo "=== Building Dessus-marches ==="
+          if [ -d "optimiseur/dessus-marches" ]; then
+            cd optimiseur/dessus-marches
+            echo "Installing dependencies..."
+            npm ci
+            echo "Building..."
+            npm run build
+            echo "Build complete, checking output..."
+            ls -la build/
+          else
+            echo "ERROR: optimiseur/dessus-marches directory not found!"
+            exit 1
+          fi
           
       - name: Install and Build Main Optimiseur
         run: |
-          cd optimiseur
-          npm ci
-          npm run build
+          echo "=== Building Main Optimiseur ==="
+          if [ -d "optimiseur" ]; then
+            cd optimiseur
+            echo "Installing dependencies..."
+            npm ci
+            echo "Building..."
+            npm run build
+            echo "Build complete, checking output..."
+            ls -la build/
+          else
+            echo "ERROR: optimiseur directory not found!"
+            exit 1
+          fi
           
       - name: Prepare deployment
         run: |
+          echo "=== Preparing deployment ==="
           mkdir -p deployment
-          cp index.html deployment/
-          cp .nojekyll deployment/
+          
+          # Check for required files
+          if [ -f "index.html" ]; then
+            cp index.html deployment/
+          else
+            echo "WARNING: index.html not found"
+          fi
+          
+          if [ -f ".nojekyll" ]; then
+            cp .nojekyll deployment/
+          else
+            echo "WARNING: .nojekyll not found"
+            touch deployment/.nojekyll
+          fi
           
           # Create optimiseur directory
           mkdir -p deployment/optimiseur
           
-          # Copy main optimiseur app files to optimiseur/
-          cp -r optimiseur/build/* deployment/optimiseur/
+          # Copy main optimiseur app files
+          if [ -d "optimiseur/build" ]; then
+            cp -r optimiseur/build/* deployment/optimiseur/
+          else
+            echo "ERROR: optimiseur/build not found!"
+          fi
           
-          # Copy sub-apps as subdirectories
-          cp -r optimiseur/mesures/build deployment/optimiseur/mesures
-          cp -r optimiseur/contremarches/build deployment/optimiseur/contremarches
-          cp -r optimiseur/dessus-marches/build deployment/optimiseur/dessus-marches
+          # Copy sub-apps
+          if [ -d "optimiseur/mesures/build" ]; then
+            cp -r optimiseur/mesures/build deployment/optimiseur/mesures
+          else
+            echo "ERROR: optimiseur/mesures/build not found!"
+          fi
           
-          # Debug: Show structure
-          echo "Deployment structure:"
+          if [ -d "optimiseur/contremarches/build" ]; then
+            cp -r optimiseur/contremarches/build deployment/optimiseur/contremarches
+          else
+            echo "ERROR: optimiseur/contremarches/build not found!"
+          fi
+          
+          if [ -d "optimiseur/dessus-marches/build" ]; then
+            cp -r optimiseur/dessus-marches/build deployment/optimiseur/dessus-marches
+          else
+            echo "ERROR: optimiseur/dessus-marches/build not found!"
+          fi
+          
+          echo "=== Deployment structure ==="
           find deployment -type d -maxdepth 3
+          echo "=== Deployment files count ==="
+          find deployment -type f | wc -l
           
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -82,7 +160,6 @@ jobs:
         with:
           path: ./deployment
 
-  # Deployment job
   deploy:
     environment:
       name: github-pages
