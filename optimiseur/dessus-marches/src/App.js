@@ -495,7 +495,7 @@ const TreadOptimizationApp = () => {
         </div>
         <h1 className="text-3xl font-bold text-gray-800 mb-2 flex items-center gap-2">
           <Scissors className="text-blue-600" />
-          Optimisation des Dessus de Marche (Mise à jour)
+          Optimisation des Dessus de Marche
         </h1>
         <p className="text-gray-600">
           Étape 3/3 : Optimisez la découpe des dessus de marche sur les grandes planches
