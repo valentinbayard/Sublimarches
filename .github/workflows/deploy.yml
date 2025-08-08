@@ -25,6 +25,7 @@ jobs:
         cd dessus-marches && npm ci
         cd mesures && npm ci
         cd .. && npm ci
+      working-directory: .
         
     - name: Build all apps
       run: |
@@ -39,6 +40,7 @@ jobs:
         
         echo "🔨 Building Main Optimiseur..."
         cd .. && npm run build
+      working-directory: .
         
     - name: Prepare deployment files
       run: |
@@ -59,6 +61,11 @@ jobs:
         cp -r optimiseur/contremarches/build/* deployment/optimiseur/contremarches/
         cp -r optimiseur/dessus-marches/build/* deployment/optimiseur/dessus-marches/
         cp -r optimiseur/build/* deployment/optimiseur/
+        
+        # List deployment contents for debugging
+        echo "📁 Deployment directory contents:"
+        find deployment -type f | head -20
+      working-directory: .
         
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
