@@ -32,7 +32,8 @@ const RiserOptimizationApp = () => {
       console.log('ProjectData mis à jour:', projectData);
       console.log('Contremarches extraites:', risers);
     }
-  }, [projectData, risers]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectData]);
 
   // Handle file upload
   const handleFileUpload = (event) => {

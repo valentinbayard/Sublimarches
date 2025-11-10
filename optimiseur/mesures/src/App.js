@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calculator, Download, Plus, Trash2, X, Copy, ArrowRight } from 'lucide-react';
+import { Calculator, Download, Trash2, X, Copy, ArrowRight } from 'lucide-react';
 
 const StairMeasurementApp = () => {
   const [projectName, setProjectName] = useState('');
