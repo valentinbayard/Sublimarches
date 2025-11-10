@@ -33,7 +33,8 @@ const TreadOptimizationApp = () => {
       console.log('ProjectData mis à jour:', projectData);
       console.log('Dessus de marche extraits:', treads);
     }
-  }, [projectData, treads]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectData]);
 
   // Handle file upload
   const handleFileUpload = (event) => {
